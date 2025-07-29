@@ -23,5 +23,3 @@ jobs:
           script: |
             cd /home/ubuntu/fastapi-app
             git pull origin main
-            docker compose down
-            docker compose up --build
