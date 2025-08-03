@@ -102,8 +102,7 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      mlflow-server:
-        condition: service_healthy
+      - mlflow-server
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
