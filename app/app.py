@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException, status
 
-import mlflow
 from mlflow.tracking import MlflowClient
 from mlflow.exceptions import MlflowException
 
@@ -11,7 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from schemas import *
-from utils import promote_model
+from utils import *
 
 app = FastAPI(title="House Price Prediction API", version="1.0.0")
 
@@ -66,14 +65,14 @@ async def health_check():
     """Health check API dan dependencies"""
     start_time = time.time()
     
-    # Contoh pengecekan dependencies
-    mlflow_status = "connected" if _check_mlflow_connection() else "disconnected"
+    mlflow_status = "connected" if check_mlflow_connection() else "disconnected"
+    mlflow_db_status = "connected" if check_postgres_connection() else "disconnected"
     
     return {
         "status": "healthy",
         "dependencies": {
             "mlflow": mlflow_status,
-            "database": "connected"  # Ganti dengan pengecekan DB nyata
+            "database": mlflow_db_status
         },
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "response_time_ms": (time.time() - start_time) * 1000
@@ -136,12 +135,3 @@ async def rollback_model(request: ModelUpdateRequest):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Rollback model failed: {str(e)}"
         )
-
-# --- Helper Functions ---
-def _check_mlflow_connection():
-    """Cek koneksi ke MLflow Tracking Server"""
-    try:
-        mlflow.search_experiments()
-        return True
-    except:
-        return False

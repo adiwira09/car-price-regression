@@ -1,6 +1,15 @@
 from typing import Dict
 from datetime import datetime
 
+import psycopg2
+from psycopg2 import OperationalError
+import mlflow
+
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 def promote_model(
         client,
         model_name: str,
@@ -62,3 +71,25 @@ def promote_model(
             "archived_previous": previous_version is not None and archive_previous
         }
     }
+
+def check_mlflow_connection() -> bool:
+    try:
+        mlflow.search_experiments()
+        return True
+    except Exception:
+        return False
+
+def check_postgres_connection():
+    try:
+        conn = psycopg2.connect(
+            host="mlflow-postgres",
+            port=5432,
+            dbname=os.getenv("POSTGRES_MLFLOW_DB"),
+            user=os.getenv("POSTGRES_MLFLOW_USER"),
+            password=os.getenv("POSTGRES_MLFLOW_PASSWORD")
+        )
+        conn.close()
+        return True
+    except OperationalError:
+        return False
+   
