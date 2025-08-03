@@ -12,7 +12,7 @@ load_dotenv()
 from schemas import *
 from utils import *
 
-app = FastAPI(title="House Price Prediction API", version="1.0.0")
+app = FastAPI(title="Car Price Prediction API", version="1.0.0")
 
 MODEL_NAME = "car_price_prediction_model"
 client = MlflowClient()
