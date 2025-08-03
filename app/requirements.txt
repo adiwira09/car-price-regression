@@ -1,0 +1,5 @@
+mlflow
+boto3
+psutil==7.0.0
+fastapi[standard]
+uvicorn[standard]
