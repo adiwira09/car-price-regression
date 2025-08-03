@@ -1,5 +1,6 @@
 mlflow
 boto3
+psycopg2-binary
 psutil==7.0.0
 fastapi[standard]
 uvicorn[standard]
