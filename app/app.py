@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, status, Body, Depends
 
 from mlflow.tracking import MlflowClient
 from mlflow.exceptions import MlflowException
@@ -11,8 +11,11 @@ load_dotenv()
 
 from schemas import *
 from utils import *
+from auth import create_access_token, verify_token
 
-app = FastAPI(title="Car Price Prediction API", version="1.0.0")
+app = FastAPI(title="Car Price Prediction API",
+              description="API for car price prediction model management",
+              version="1.0.0")
 
 MODEL_NAME = "car_price_prediction_model"
 client = MlflowClient()
@@ -37,6 +40,15 @@ async def root():
 #         {"id": 1, "predicted_price": 5000000000},
 #         {"id": 2, "predicted_price": 4500000000}
 #     ]
+API_KEY = "my_static_api_key_123"
+
+@app.post("/token")
+async def get_token(api_key: str = Body(..., embed=True)):
+    """Endpoint untuk mendapatkan token akses"""
+    if api_key != os.getenv("API_KEY"):
+        raise HTTPException(status_code=401, detail="Invalid API key")
+    access_token = create_access_token(data={"sub": "api_client"})
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/model/metadata", response_model=ModelMetadataResponse)
 async def get_model_metadata():
@@ -78,9 +90,9 @@ async def health_check():
         "response_time_ms": (time.time() - start_time) * 1000
     }
 
-@app.post("/model/update", response_model=ModelUpdateResponse)
+@app.post("/model/update", response_model=ModelUpdateResponse, dependencies=[Depends(verify_token)])
 async def update_model(request: ModelUpdateRequest):
-    """Promote model ke Production dari Staging"""
+    """Promote model Staging ke Production"""
     try:
         result = promote_model(
             client=client,
@@ -107,9 +119,9 @@ async def update_model(request: ModelUpdateRequest):
             detail=f"Update model failed: {str(e)}"
         )
 
-@app.post("/model/rollback", response_model=ModelUpdateResponse)
+@app.post("/model/rollback", response_model=ModelUpdateResponse, dependencies=[Depends(verify_token)])
 async def rollback_model(request: ModelUpdateRequest):
-    """Rollback model ke versi tertentu"""
+    """Rollback model Archived ke versi tertentu"""
     try:
         result = promote_model(
             client=client,

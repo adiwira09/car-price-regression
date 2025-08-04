@@ -96,13 +96,16 @@ services:
       dockerfile: Dockerfile.fastapi
     container_name: fastapi_app
     environment:
-      - MLFLOW_TRACKING_URI=http://mlflow-server:5000
-      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - MLFLOW_TRACKING_URI=${MLFLOW_TRACKING_URI:-http://mlflow-server:5000}
+      - MLFLOW_S3_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL:-http://minio:9000}
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - POSTGRES_MLFLOW_HOST=${POSTGRES_MLFLOW_HOST:-mlflow-postgres}
       - POSTGRES_MLFLOW_USER=${POSTGRES_MLFLOW_USER}
       - POSTGRES_MLFLOW_PASSWORD=${POSTGRES_MLFLOW_PASSWORD}
       - POSTGRES_MLFLOW_DB=${POSTGRES_MLFLOW_DB}
+      - SECRET_KEY=${SECRET_KEY}
+      - API_KEY=${API_KEY}
     expose:
       - "8000"
     depends_on:
