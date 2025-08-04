@@ -94,6 +94,7 @@ services:
     build:
       context: ./app
       dockerfile: Dockerfile.fastapi
+    container_name: fastapi_app
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow-server:5000
       - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
