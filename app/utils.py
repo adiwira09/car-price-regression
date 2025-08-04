@@ -82,7 +82,7 @@ def check_mlflow_connection() -> bool:
 def check_postgres_connection():
     try:
         conn = psycopg2.connect(
-            host="mlflow-postgres",
+            host=os.getenv("POSTGRES_MLFLOW_HOST"),
             port=5432,
             dbname=os.getenv("POSTGRES_MLFLOW_DB"),
             user=os.getenv("POSTGRES_MLFLOW_USER"),
