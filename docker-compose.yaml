@@ -99,8 +99,11 @@ services:
       - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-    ports:
-      - "8000:8000"
+      - POSTGRES_MLFLOW_USER=${POSTGRES_MLFLOW_USER}
+      - POSTGRES_MLFLOW_PASSWORD=${POSTGRES_MLFLOW_PASSWORD}
+      - POSTGRES_MLFLOW_DB=${POSTGRES_MLFLOW_DB}
+    expose:
+      - "8000"
     depends_on:
       - mlflow-server
     healthcheck:
@@ -112,6 +115,18 @@ services:
     networks:
       - mlflow-network
     command: uvicorn app:app --host=0.0.0.0 --port=8000 --workers 4
+  
+  nginx:
+    image: nginx:latest
+    container_name: nginx_reverse_proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - fastapi
+    networks:
+      - mlflow-network
 
 volumes:
   mlflow-postgres-data:
