@@ -90,6 +90,10 @@ def check_postgres_connection():
         )
         conn.close()
         return True
-    except OperationalError:
+    except OperationalError as e:
+        print(f"Postgres connection error: {e}")
+        return False
+    except Exception as e:
+        print(f"Unexpected error: {e}")
         return False
    
