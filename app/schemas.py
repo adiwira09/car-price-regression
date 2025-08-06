@@ -1,6 +1,7 @@
 from typing import Literal, Optional
 from pydantic import BaseModel
 
+# endpoint prediction
 class PredictionRequest(BaseModel):
     wheelbase: float
     carlength: float
@@ -36,6 +37,7 @@ class BatchPredictionResponse(BaseModel):
     model_version: str
     status: str
 
+# endpoint metadata model loaded
 class ModelMetadataResponse(BaseModel):
     model_name: str
     version: str
@@ -43,12 +45,24 @@ class ModelMetadataResponse(BaseModel):
     metrics: dict
     parameters: dict
 
+#  endpoint health check
+class ModelHealthStatus(BaseModel):
+    name: str
+    version: Optional[str] = None
+    status: str
+
+class DependenciesStatus(BaseModel):
+    mlflow: str
+    database: str
+    model: ModelHealthStatus
+
 class HealthCheckResponse(BaseModel):
     status: str
-    dependencies: dict
+    dependencies: DependenciesStatus
     timestamp: str
     response_time_ms: float
 
+# endpoint model update
 class ModelUpdateRequest(BaseModel):
     model_name: str
     version: str

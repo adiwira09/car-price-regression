@@ -1,8 +1,10 @@
 from fastapi import FastAPI, HTTPException, status, Body, Depends
 from typing import List
+import logging
 
 from mlflow.tracking import MlflowClient
 from mlflow.exceptions import MlflowException
+import mlflow.sklearn
 
 import time
 from datetime import datetime
@@ -15,14 +17,72 @@ from schemas import *
 from utils import *
 from auth import create_access_token, verify_token
 
+# logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 app = FastAPI(title="Car Price Prediction API",
               description="API for car price prediction model management",
               version="1.0.0")
 
+async def load_model():
+    """Load the latest production model into memory"""
+    try:
+        client = app.state.client
+        model_name = app.state.model_name
+        
+        latest_versions = client.get_latest_versions(model_name, stages=["Production"])
+        if not latest_versions:
+            logger.error(f"Model {model_name} not found in Production stage")
+            app.state.model = None
+            app.state.model_version = None
+            app.state.model_run_id = None
+            return
+            
+        latest_version = latest_versions[0].version
+        run_id = latest_versions[0].run_id
+        
+        # Check if we already have this version loaded
+        if (hasattr(app.state, 'model_version') and 
+            app.state.model_version == latest_version and 
+            app.state.model is not None):
+            logger.info(f"Model {model_name} v{latest_version} already loaded")
+            return
+            
+        logger.info(f"Loading model {model_name} v{latest_version}")
+        
+        # load model
+        model = mlflow.sklearn.load_model(f"models:/{model_name}/{latest_version}")
+        
+        # Store in application state
+        app.state.model = model
+        app.state.model_version = latest_version
+        app.state.model_run_id = run_id
+        
+        logger.info(f"Successfully loaded model {model_name} v{latest_version}")
+        
+    except Exception as e:
+        logger.error(f"Failed to load model: {str(e)}")
+        app.state.model = None
+        app.state.model_version = None
+        app.state.model_run_id = None
+        raise
+
 @app.on_event("startup")
 async def startup_event():
+    """Initialize application state and load model"""
     app.state.client = MlflowClient()
     app.state.model_name = "Random_Forest_Regressor"
+    app.state.model = None
+    app.state.model_version = None
+    app.state.model_run_id = None
+    
+    # Load the initial model
+    try:
+        await load_model()
+    except Exception as e:
+        logger.error(f"Failed to load model during startup: {str(e)}")
+        # Continue startup even if model loading fails
 
 @app.get("/")
 async def root():
@@ -40,72 +100,60 @@ async def get_token(api_key: str = Body(..., embed=True)):
 async def predict(request: PredictionRequest):
     """Endpoint untuk prediksi tunggal"""
     try:
-        client = app.state.client
-        model_name = app.state.model_name
-
-        latest_versions = client.get_latest_versions(model_name, stages=["Production"])
-        if not latest_versions:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Model {model_name} not found in Production stage"
-            )
-        latest_version = latest_versions[0].version
-        run = client.get_run(latest_versions[0].run_id)
-        if not run:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Run for model version {latest_version} not found"
-            )
-
+        # Check if model is loaded
+        if app.state.model is None:
+            # Try to reload model
+            await load_model()
+            if app.state.model is None:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Model is not available"
+                )
+        
+        # Prepare input data
         input_df = pd.DataFrame([request.dict()])
-
-        model = mlflow.sklearn.load_model(f"models:/{model_name}/{latest_version}")
-        prediction = model.predict(input_df)[0]
+        
+        # Make prediction using cached model
+        prediction = app.state.model.predict(input_df)[0]
         price_segment = assign_price_segment(prediction)
 
         return {
             "predicted_price": prediction,
             "price_segment": price_segment,
             "model_name": app.state.model_name,
-            "model_version": latest_version,
+            "model_version": app.state.model_version,
             "status": "success"
         }
+        
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Prediction failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Prediction failed: {str(e)}"
-        )
-    except AttributeError:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Model is not loaded or has been unloaded"
         )
 
 @app.post("/batch-predict", response_model=List[BatchPredictionResponse])
 async def batch_predict(requests: List[PredictionRequest]):
     """Endpoint untuk prediksi batch"""
     try:
-        client = app.state.client
-        model_name = app.state.model_name
-
-        latest_versions = client.get_latest_versions(model_name, stages=["Production"])
-        if not latest_versions:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Model {model_name} not found in Production stage"
-            )
-        latest_version = latest_versions[0].version
-        run = client.get_run(latest_versions[0].run_id)
-        if not run:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Run for model version {latest_version} not found"
-            )
+        # Check if model is loaded
+        if app.state.model is None:
+            # Try to reload model
+            await load_model()
+            if app.state.model is None:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Model is not available"
+                )
         
+        # Prepare input data
         input_df = pd.DataFrame([r.dict() for r in requests])
-
-        model = mlflow.sklearn.load_model(f"models:/{model_name}/{latest_version}")
-        predictions = model.predict(input_df)
+        
+        # Make predictions using cached model
+        predictions = app.state.model.predict(input_df)
+        
         results = []
         for idx, pred in enumerate(predictions):
             price_segment = assign_price_segment(pred)
@@ -118,15 +166,14 @@ async def batch_predict(requests: List[PredictionRequest]):
                 "status": "success"
             })
         return results
+        
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Batch prediction failed: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Batch prediction failed: {str(e)}"
-        )
-    except AttributeError:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Model is not loaded or has been unloaded"
         )
 
 @app.get("/model/metadata", response_model=ModelMetadataResponse)
@@ -150,7 +197,7 @@ async def get_model_metadata():
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Run for model version {latest_version} not found"
             )
-        training_datetime = datetime.fromtimestamp(run.info.start_time / 1000) # Convert MLflow timestamp to datetime
+        training_datetime = datetime.fromtimestamp(run.info.start_time / 1000)
         
         return {
             "model_name": model_name,
@@ -173,11 +220,27 @@ async def health_check():
     mlflow_status = "connected" if check_mlflow_connection() else "disconnected"
     mlflow_db_status = "connected" if check_postgres_connection() else "disconnected"
     
+    # Check model status with detailed information
+    model_status = "loaded" if app.state.model is not None else "not_loaded"
+    
+    # Determine overall health status
+    overall_status = "healthy"
+    if model_status == "not_loaded":
+        overall_status = "degraded"
+    elif mlflow_status == "disconnected":
+        overall_status = "degraded"
+    # Database disconnected is not critical for prediction, so we don't degrade for that
+    
     return {
-        "status": "healthy",
+        "status": overall_status,
         "dependencies": {
             "mlflow": mlflow_status,
-            "database": mlflow_db_status
+            "database": mlflow_db_status,
+            "model": {
+                "name": app.state.model_name,
+                "version": app.state.model_version,
+                "status": model_status
+            }
         },
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "response_time_ms": (time.time() - start_time) * 1000
@@ -185,7 +248,7 @@ async def health_check():
 
 @app.post("/model/update", response_model=ModelUpdateResponse, dependencies=[Depends(verify_token)])
 async def update_model(request: ModelUpdateRequest):
-    """Promote model Staging ke Production"""
+    """Promote model Staging ke Production dan reload model"""
     try:
         if request.model_name:
             app.state.model_name = request.model_name
@@ -199,8 +262,15 @@ async def update_model(request: ModelUpdateRequest):
             source_stage="Staging",
             archive_previous=True
         )
-        result["message"] = f"Model {model_name} v{request.version} promoted from Staging to Production"
+        
+        # Reload model after successful promotion
+        logger.info("Reloading model after update...")
+        await load_model()
+        
+        result["message"] = f"Model {model_name} v{request.version} promoted from Staging to Production and reloaded"
+        result["current_version"] = app.state.model_version
         return result
+        
     except MlflowException as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -219,7 +289,7 @@ async def update_model(request: ModelUpdateRequest):
 
 @app.post("/model/rollback", response_model=ModelUpdateResponse, dependencies=[Depends(verify_token)])
 async def rollback_model(request: ModelUpdateRequest):
-    """Rollback model Archived ke versi tertentu"""
+    """Rollback model Archived ke versi tertentu dan reload model"""
     try:
         model_name = app.state.model_name or request.model_name
         
@@ -230,8 +300,15 @@ async def rollback_model(request: ModelUpdateRequest):
             source_stage="Archived",
             archive_previous=True
         )
-        result["message"] = f"Model {model_name} v{request.version} rolled back from Archived to Production"
+        
+        # Reload model after successful rollback
+        logger.info("Reloading model after rollback...")
+        await load_model()
+        
+        result["message"] = f"Model {model_name} v{request.version} rolled back from Archived to Production and reloaded"
+        result["current_version"] = app.state.model_version
         return result
+        
     except MlflowException as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -247,3 +324,20 @@ async def rollback_model(request: ModelUpdateRequest):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Rollback model failed: {str(e)}"
         )
+
+# @app.post("/model/reload", dependencies=[Depends(verify_token)])
+# async def reload_model():
+#     """Manual reload model - useful for debugging or forcing refresh"""
+#     try:
+#         await load_model()
+#         return {
+#             "message": "Model reloaded successfully",
+#             "model_name": app.state.model_name,
+#             "model_version": app.state.model_version,
+#             "status": "success"
+#         }
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Failed to reload model: {str(e)}"
+#         )
