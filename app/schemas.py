@@ -1,14 +1,40 @@
-from typing import Optional
+from typing import Literal, Optional
 from pydantic import BaseModel
+
+class PredictionRequest(BaseModel):
+    wheelbase: float
+    carlength: float
+    carwidth: float
+    curbweight: float
+    enginesize: float
+    boreratio: float
+    horsepower: float
+    citympg: float
+    highwaympg: float
+    CompanyName: str
+    fueltype: Literal['gas', 'diesel']
+    aspiration: Literal['std', 'turbo']
+    doornumber: Literal['two', 'four']
+    carbody: Literal['sedan', 'hatchback', 'wagon', 'hardtop', 'convertible']
+    drivewheel: Literal['fwd', 'rwd', 'awd']
+    enginetype: Literal['ohc', 'ohcf', 'ohcv', 'dohc', 'l', 'rotor', 'dohcv']
+    cylindernumber: Literal['four', 'six', 'five', 'eight', 'two', 'twelve', 'three']
+    fuelsystem: Literal['mpfi', '2bbl', 'idi', '1bbl', 'spdi', '4bbl', 'mfi', 'spfi']
 
 class PredictionResponse(BaseModel):
     predicted_price: float
+    price_segment: str
+    model_name: str
     model_version: str
     status: str
 
-class BatchPredictionItem(BaseModel):
+class BatchPredictionResponse(BaseModel):
     id: int
     predicted_price: float
+    price_segment: str
+    model_name: str
+    model_version: str
+    status: str
 
 class ModelMetadataResponse(BaseModel):
     model_name: str
@@ -24,6 +50,7 @@ class HealthCheckResponse(BaseModel):
     response_time_ms: float
 
 class ModelUpdateRequest(BaseModel):
+    model_name: str
     version: str
 
 class ModelUpdateResponse(BaseModel):

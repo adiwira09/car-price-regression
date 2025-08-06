@@ -96,4 +96,11 @@ def check_postgres_connection():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return False
-   
+
+def assign_price_segment(price, bins=[0, 10495, 19045, 45400]): # Low, Mid, High
+    if price <= bins[1]:
+        return 'Low'
+    elif price <= bins[2]:
+        return 'Mid'
+    else:
+        return 'High'
