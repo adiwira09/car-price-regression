@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Token API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a202c; /* Warna latar belakang gelap */
+            color: #e2e8f0; /* Warna teks terang */
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+    <div class="bg-gray-800 p-8 rounded-2xl shadow-xl w-full max-w-md mx-4">
+        <h1 class="text-3xl font-bold text-center text-teal-400 mb-6">🔐 API Token Generator</h1>
+        <p class="text-gray-400 text-center mb-6">Generate access token for Car Price Prediction API</p>
+
+        <div id="message-box" class="hidden mb-4 p-3 rounded-lg text-sm" role="alert"></div>
+
+        <form id="token-form">
+            <div class="mb-4">
+                <input type="password" id="api_key" name="api_key" 
+                       class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-white" 
+                       placeholder="Enter API key" required>
+            </div>
+
+            <button type="submit" 
+                    class="w-full bg-teal-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-teal-600 transition duration-300">
+                Generate Token
+            </button>
+        </form>
+
+        <div id="token-display" class="mt-6 hidden">
+            <label for="access_token" class="block text-gray-300 text-sm font-semibold mb-2">Your Access Token:</label>
+            <div class="relative">
+                <textarea id="access_token" rows="4" readonly 
+                          class="w-full p-4 pr-12 bg-gray-700 border border-gray-600 rounded-lg text-white font-mono text-sm resize-none"></textarea>
+                <button id="copy-button" class="absolute top-3 right-3 text-gray-400 hover:text-teal-400 transition duration-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7v4a1 1 0 001 1h4a1 1 0 001-1V7m0 4a1 1 0 01-1 1H9a1 1 0 01-1-1m1-4h.01M16 11V7a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2h4a2 2 0 002-2zM12 2a1 1 0 011 1v1a1 1 0 01-2 0V3a1 1 0 011-1z" />
+                    </svg>
+                </button>
+            </div>
+            <p class="text-sm text-gray-400 mt-2 text-right">Click the icon to copy the token.</p>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('token-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const apiKey = document.getElementById('api_key').value;
+            const messageBox = document.getElementById('message-box');
+            const tokenDisplay = document.getElementById('token-display');
+            const accessTokenTextarea = document.getElementById('access_token');
+            
+            messageBox.classList.add('hidden');
+            tokenDisplay.classList.add('hidden');
+
+            try {
+                const response = await fetch('/token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ api_key: apiKey })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    accessTokenTextarea.value = data.access_token;
+                    tokenDisplay.classList.remove('hidden');
+                    showMessage("Token Generated Successfully!", "success");
+                } else {
+                    throw new Error(data.detail || "An error occurred while generating the token.");
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showMessage(error.message, "error");
+            }
+        });
+
+        document.getElementById('copy-button').addEventListener('click', () => {
+            const accessTokenTextarea = document.getElementById('access_token');
+            accessTokenTextarea.select();
+            document.execCommand('copy');
+            showMessage("Copied Token!", "success");
+        });
+
+        function showMessage(message, type) {
+            const messageBox = document.getElementById('message-box');
+            messageBox.textContent = message;
+            messageBox.classList.remove('hidden', 'bg-red-500', 'bg-green-500');
+            messageBox.classList.add(type === 'success' ? 'bg-green-500' : 'bg-red-500');
+        }
+    </script>
+</body>
+</html>

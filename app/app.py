@@ -1,10 +1,13 @@
 from fastapi import FastAPI, HTTPException, status, Body, Depends
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from prometheus_fastapi_instrumentator import Instrumentator
+
 from typing import List
 import logging
 
 from mlflow.tracking import MlflowClient
 from mlflow.exceptions import MlflowException
-import mlflow.sklearn
 
 import time
 from datetime import datetime
@@ -24,6 +27,9 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Car Price Prediction API",
               description="API for car price prediction model management",
               version="1.0.0")
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+Instrumentator().instrument(app).expose(app)
 
 async def load_model():
     """Load the latest production model into memory"""
@@ -87,6 +93,10 @@ async def startup_event():
 @app.get("/")
 async def root():
     return {"message": "Hello World"}
+
+@app.get("/token-dashboard", include_in_schema=False)
+async def token_dashboard():
+    return FileResponse("static/token_dashboard.html")
 
 @app.post("/token")
 async def get_token(api_key: str = Body(..., embed=True)):
@@ -324,20 +334,3 @@ async def rollback_model(request: ModelUpdateRequest):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Rollback model failed: {str(e)}"
         )
-
-# @app.post("/model/reload", dependencies=[Depends(verify_token)])
-# async def reload_model():
-#     """Manual reload model - useful for debugging or forcing refresh"""
-#     try:
-#         await load_model()
-#         return {
-#             "message": "Model reloaded successfully",
-#             "model_name": app.state.model_name,
-#             "model_version": app.state.model_version,
-#             "status": "success"
-#         }
-#     except Exception as e:
-#         raise HTTPException(
-#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-#             detail=f"Failed to reload model: {str(e)}"
-#         )
