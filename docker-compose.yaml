@@ -189,4 +189,5 @@ volumes:
 
 networks:
   mlflow-network:
+    name: mlflow-network
     driver: bridge
