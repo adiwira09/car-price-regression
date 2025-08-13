@@ -94,6 +94,10 @@ async def startup_event():
 async def root():
     return {"message": "Hello World"}
 
+@app.get("/predict_dashboard")
+async def serve_predict_dashboard():
+    return FileResponse("static/predict_dashboard/index.html")
+
 @app.get("/token-dashboard", include_in_schema=False)
 async def token_dashboard():
     return FileResponse("static/token_dashboard.html")
