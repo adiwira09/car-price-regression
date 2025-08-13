@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Price Prediction</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background elements */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(14, 165, 233, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(168, 85, 247, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(34, 197, 94, 0.1) 0%, transparent 50%);
+            animation: backgroundShift 20s ease-in-out infinite alternate;
+            pointer-events: none;
+        }
+        
+        @keyframes backgroundShift {
+            0% { transform: translateX(-10px) translateY(-10px) scale(1); }
+            100% { transform: translateX(10px) translateY(10px) scale(1.05); }
+        }
+        
+        .glass-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+        }
+        
+        .input-modern {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .input-modern:focus {
+            background: rgba(30, 41, 59, 0.9);
+            border-color: rgba(20, 184, 166, 0.5);
+            box-shadow: 
+                0 0 0 3px rgba(20, 184, 166, 0.1),
+                0 8px 16px -4px rgba(20, 184, 166, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .input-modern:hover {
+            border-color: rgba(148, 163, 184, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #14b8a6 0%, #0891b2 100%);
+            border: none;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.6s;
+        }
+        
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 
+                0 12px 24px -8px rgba(20, 184, 166, 0.4),
+                0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        .result-card {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(20, 184, 166, 0.3);
+            animation: slideInUp 0.6s ease-out;
+        }
+
+        /* Perubahan warna placeholder untuk aksesibilitas */
+        ::placeholder {
+            color: rgba(203, 213, 225, 0.85); /* lebih terang dari sebelumnya */
+        }
+
+        /* Modal styling */
+        .modal-bg {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background: rgba(15, 23, 42, 0.95);
+            border-radius: 1rem;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        /* Progress indicator */
+        .progress-container {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: rgba(15, 23, 42, 0.95);
+            padding: 0.5rem 0;
+        }
+        .progress-bar {
+            height: 6px;
+            background: linear-gradient(90deg, #14b8a6, #0891b2);
+            width: 0%;
+            transition: width 0.2s ease;
+            border-radius: 3px;
+        }
+
+        /* Tombol kembali ke atas */
+        #back-to-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            display: none;
+            background: #14b8a6;
+            color: white;
+            border-radius: 999px;
+            padding: 0.75rem 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            transition: transform 0.2s;
+        }
+        #back-to-top:hover {
+            transform: translateY(-2px);
+        }
+        
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .grid-responsive {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        
+        @media (min-width: 768px) {
+            .grid-responsive {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1.5rem;
+            }
+        }
+        
+        .floating-icon {
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .message-success {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(16, 185, 129, 0.9));
+            border-left: 4px solid #10b981;
+        }
+        
+        .message-error {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(220, 38, 38, 0.9));
+            border-left: 4px solid #dc2626;
+        }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(20, 184, 166, 0.5);
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(20, 184, 166, 0.7);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+    <div id="token-modal" class="modal-bg hidden">
+        <div class="modal-content">
+            <h2 class="text-2xl font-bold mb-4">Token Tidak Ditemukan</h2>
+            <p class="text-slate-300 mb-4">
+                Untuk menggunakan fitur prediksi, token akses diperlukan.<br>
+                Silakan menuju ke <strong>Token Dashboard</strong> untuk membuat token baru.
+            </p>
+            <button onclick="window.location.href='/token-dashboard'" class="btn-primary px-6 py-2 rounded-lg">
+                Buka Token Dashboard
+            </button>
+        </div>
+    </div>
+    <div class="progress-container">
+        <div id="progress-bar" class="progress-bar"></div>
+    </div>
+    <div class="glass-card rounded-3xl w-full max-w-5xl mx-auto p-6 md:p-8 lg:p-12 fade-in">
+        <!-- Header Section -->
+        <div class="text-center mb-8 lg:mb-12">
+            <div class="floating-icon text-6xl mb-4">🚗</div>
+            <h1 class="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-teal-400 via-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
+                Car Price Prediction
+            </h1>
+            <p class="text-slate-300 text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed">
+                Dapatkan estimasi harga mobil yang akurat dengan teknologi AI terdepan
+            </p>
+            <div class="w-24 h-1 bg-gradient-to-r from-teal-400 to-blue-400 mx-auto mt-6 rounded-full"></div>
+        </div>
+
+        <!-- Message Box -->
+        <div id="message-box" class="hidden mb-6 p-4 rounded-xl backdrop-filter backdrop-blur-md text-sm font-medium shadow-lg">
+            <div class="flex items-center space-x-2">
+                <span id="message-icon"></span>
+                <span id="message-text"></span>
+            </div>
+        </div>
+
+        <!-- Main Form -->
+        <form id="predict-form" class="space-y-8">
+            <!-- Numeric Specifications -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-semibold text-slate-200 flex items-center space-x-2">
+                    <span class="w-2 h-2 bg-teal-400 rounded-full"></span>
+                    <span>Spesifikasi Teknis</span>
+                </h3>
+                <div class="grid-responsive">
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Wheelbase</label>
+                        <input type="number" step="0.01" name="wheelbase" placeholder="Contoh: 94.5" required 
+                               class="input-modern w-full px-4 py-3 rounded-xl text-white placeholder-slate-400 focus:outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Panjang Mobil</label>
+                        <input type="number" step="0.01" name="carlength" placeholder="Contoh: 141.1" required 
+                               class="input-modern w-full px-4 py-3 rounded-xl text-white placeholder-slate-400 focus:outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Lebar Mobil</label>
+                        <input type="number" step="0.01" name="carwidth" placeholder="Contoh: 60.3" required 
+                               class="input-modern w-full px-4 py-3 rounded-xl text-white placeholder-slate-400 focus:outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Berat Kosong</label>
+                        <input type="number" step="0.01" name="curbweight" placeholder="Contoh: 2548" required 
+                               class="input-modern w-full px-4 py-3 rounded-xl text-white placeholder-slate-400 focus:outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Engine Specifications -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-semibold text-slate-200 flex items-center space-x-2">
+                    <span class="w-2 h-2 bg-blue-400 rounded-full"></span>
+                    <span>Spesifikasi Mesin</span>
+                </h3>
+                <div class="grid-responsive">
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Ukuran Mesin</label>
+                        <input type="number" step="0.01" name="enginesize" placeholder="Contoh: 130" required 
+                               class="input-modern w-full px-4 py-3 rounded-xl text-white placeholder-slate-400 focus:outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Bore Ratio</label>
+                        <input type="number" step="0.01" name="boreratio" placeholder="Contoh: 3.47" required 
+                               class="input-modern w-full px-4 py-3 rounded-xl text-white placeholder-slate-400 focus:outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Horsepower</label>
+                        <input type="number" step="0.01" name="horsepower" placeholder="Contoh: 111" required 
+                               class="input-modern w-full px-4 py-3 rounded-xl text-white placeholder-slate-400 focus:outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Nama Perusahaan</label>
+                        <input type="text" name="CompanyName" placeholder="Contoh: Toyota" required 
+                               class="input-modern w-full px-4 py-3 rounded-xl text-white placeholder-slate-400 focus:outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fuel Economy -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-semibold text-slate-200 flex items-center space-x-2">
+                    <span class="w-2 h-2 bg-green-400 rounded-full"></span>
+                    <span>Konsumsi Bahan Bakar</span>
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">City MPG</label>
+                        <input type="number" step="0.01" name="citympg" placeholder="Contoh: 19" required 
+                               class="input-modern w-full px-4 py-3 rounded-xl text-white placeholder-slate-400 focus:outline-none">
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Highway MPG</label>
+                        <input type="number" step="0.01" name="highwaympg" placeholder="Contoh: 27" required 
+                               class="input-modern w-full px-4 py-3 rounded-xl text-white placeholder-slate-400 focus:outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vehicle Configuration -->
+            <div class="space-y-4">
+                <h3 class="text-xl font-semibold text-slate-200 flex items-center space-x-2">
+                    <span class="w-2 h-2 bg-purple-400 rounded-full"></span>
+                    <span>Konfigurasi Kendaraan</span>
+                </h3>
+                <div class="grid-responsive">
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Jenis Bahan Bakar</label>
+                        <select name="fueltype" required class="input-modern w-full px-4 py-3 rounded-xl text-white focus:outline-none">
+                            <option value="">Pilih jenis bahan bakar</option>
+                            <option value="gas">Bensin</option>
+                            <option value="diesel">Diesel</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Aspirasi</label>
+                        <select name="aspiration" required class="input-modern w-full px-4 py-3 rounded-xl text-white focus:outline-none">
+                            <option value="">Pilih aspirasi</option>
+                            <option value="std">Standard</option>
+                            <option value="turbo">Turbo</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Jumlah Pintu</label>
+                        <select name="doornumber" required class="input-modern w-full px-4 py-3 rounded-xl text-white focus:outline-none">
+                            <option value="">Pilih jumlah pintu</option>
+                            <option value="two">Dua Pintu</option>
+                            <option value="four">Empat Pintu</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Tipe Body</label>
+                        <select name="carbody" required class="input-modern w-full px-4 py-3 rounded-xl text-white focus:outline-none">
+                            <option value="">Pilih tipe body</option>
+                            <option value="sedan">Sedan</option>
+                            <option value="hatchback">Hatchback</option>
+                            <option value="wagon">Wagon</option>
+                            <option value="hardtop">Hardtop</option>
+                            <option value="convertible">Convertible</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Sistem Penggerak</label>
+                        <select name="drivewheel" required class="input-modern w-full px-4 py-3 rounded-xl text-white focus:outline-none">
+                            <option value="">Pilih sistem penggerak</option>
+                            <option value="fwd">Front Wheel Drive</option>
+                            <option value="rwd">Rear Wheel Drive</option>
+                            <option value="awd">All Wheel Drive</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Tipe Mesin</label>
+                        <select name="enginetype" required class="input-modern w-full px-4 py-3 rounded-xl text-white focus:outline-none">
+                            <option value="">Pilih tipe mesin</option>
+                            <option value="ohc">OHC</option>
+                            <option value="ohcf">OHCF</option>
+                            <option value="ohcv">OHCV</option>
+                            <option value="dohc">DOHC</option>
+                            <option value="l">L</option>
+                            <option value="rotor">Rotor</option>
+                            <option value="dohcv">DOHCV</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Jumlah Silinder</label>
+                        <select name="cylindernumber" required class="input-modern w-full px-4 py-3 rounded-xl text-white focus:outline-none">
+                            <option value="">Pilih jumlah silinder</option>
+                            <option value="two">Dua</option>
+                            <option value="three">Tiga</option>
+                            <option value="four">Empat</option>
+                            <option value="five">Lima</option>
+                            <option value="six">Enam</option>
+                            <option value="eight">Delapan</option>
+                            <option value="twelve">Dua Belas</option>
+                        </select>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-sm font-medium text-slate-300">Sistem Bahan Bakar</label>
+                        <select name="fuelsystem" required class="input-modern w-full px-4 py-3 rounded-xl text-white focus:outline-none">
+                            <option value="">Pilih sistem bahan bakar</option>
+                            <option value="mpfi">MPFI</option>
+                            <option value="2bbl">2BBL</option>
+                            <option value="idi">IDI</option>
+                            <option value="1bbl">1BBL</option>
+                            <option value="spdi">SPDI</option>
+                            <option value="4bbl">4BBL</option>
+                            <option value="mfi">MFI</option>
+                            <option value="spfi">SPFI</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="pt-6">
+                <button type="submit" class="btn-primary w-full py-4 px-8 rounded-xl text-white font-bold text-lg shadow-xl">
+                    <span class="relative z-10">Prediksi Harga Mobil</span>
+                </button>
+            </div>
+        </form>
+
+        <!-- Result Section -->
+        <div id="result-box" class="mt-8 hidden result-card p-6 lg:p-8 rounded-2xl shadow-2xl">
+            <div class="text-center mb-6">
+                <div class="text-4xl mb-3">🎯</div>
+                <h2 class="text-2xl lg:text-3xl font-bold text-white mb-2">Hasil Prediksi</h2>
+                <div class="w-16 h-1 bg-gradient-to-r from-teal-400 to-blue-400 mx-auto rounded-full"></div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="text-center lg:text-left">
+                    <p id="predicted-price" class="text-2xl lg:text-3xl font-bold text-teal-400 mb-2"></p>
+                    <p id="price-segment" class="text-xl font-semibold text-slate-300 mb-4"></p>
+                </div>
+                <div class="text-center lg:text-right">
+                    <p id="model-info" class="text-sm text-slate-400 bg-slate-800 bg-opacity-50 px-4 py-2 rounded-lg inline-block"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <button id="back-to-top">⬆</button>
+
+    <script>
+        // Check token
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+            document.getElementById("token-modal").classList.remove("hidden");
+        }
+
+        // Progress bar saat scroll
+        window.addEventListener("scroll", () => {
+            const docHeight = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrollTop = window.scrollY;
+            const progress = (scrollTop / docHeight) * 100;
+            document.getElementById("progress-bar").style.width = progress + "%";
+
+            // Munculkan tombol back-to-top jika scroll lebih dari 500px
+            const backToTop = document.getElementById("back-to-top");
+            if (scrollTop > 500) {
+                backToTop.style.display = "block";
+            } else {
+                backToTop.style.display = "none";
+            }
+        });
+
+        // Tombol kembali ke atas
+        document.getElementById("back-to-top").addEventListener("click", () => {
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        document.getElementById('predict-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const data = {};
+            formData.forEach((value, key) => {
+                if (!isNaN(value) && value.trim() !== "") {
+                    data[key] = parseFloat(value);
+                } else {
+                    data[key] = value;
+                }
+            });
+
+            // Show loading state
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="relative z-10">⏳ Memproses...</span>';
+            submitBtn.disabled = true;
+
+            try {
+                const res = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(result.detail || "Prediksi gagal");
+                }
+
+                // Format currency
+                const price = new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(result.predicted_price);
+
+                document.getElementById('predicted-price').textContent = price;
+                document.getElementById('price-segment').textContent = `Segmen: ${result.price_segment}`;
+                document.getElementById('model-info').textContent = `Model: ${result.model_name} v${result.model_version}`;
+
+                document.getElementById('result-box').classList.remove('hidden');
+                showMessage("✅ Prediksi berhasil! Scroll ke bawah untuk melihat hasil.", "success");
+                
+                // Smooth scroll to result
+                setTimeout(() => {
+                    document.getElementById('result-box').scrollIntoView({ 
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                }, 300);
+
+            } catch (err) {
+                console.error(err);
+                showMessage(`❌ ${err.message}`, "error");
+            } finally {
+                // Reset button
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+
+        function showMessage(msg, type) {
+            const box = document.getElementById('message-box');
+            const icon = document.getElementById('message-icon');
+            const text = document.getElementById('message-text');
+            
+            text.textContent = msg;
+            box.classList.remove('hidden', 'message-success', 'message-error');
+            box.classList.add(type === 'success' ? 'message-success' : 'message-error');
+            
+            // Auto hide after 5 seconds
+            setTimeout(() => {
+                box.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Add subtle animations on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in');
+                }
+            });
+        }, observerOptions);
+
+        // Observe form sections
+        document.querySelectorAll('form > div').forEach(section => {
+            observer.observe(section);
+        });
+    </script>
+</body>
+</html>

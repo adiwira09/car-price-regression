@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Token API</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                        },
+                        'dark': {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-in-out',
+                        'slide-up': 'slideUp 0.3s ease-out',
+                        'pulse-slow': 'pulse 3s infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' }
+                        },
+                        glow: {
+                            '0%': { boxShadow: '0 0 5px rgba(20, 184, 166, 0.5)' },
+                            '100%': { boxShadow: '0 0 20px rgba(20, 184, 166, 0.8), 0 0 40px rgba(20, 184, 166, 0.3)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(20, 184, 166, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(168, 85, 247, 0.05) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        
+        .glass-effect {
+            backdrop-filter: blur(16px);
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+        }
+        
+        .input-glow:focus {
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1), 0 0 20px rgba(20, 184, 166, 0.2);
+        }
+        
+        .button-gradient {
+            background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+            transition: all 0.3s ease;
+        }
+        
+        .button-gradient:hover {
+            background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(20, 184, 166, 0.3);
+        }
+        
+        .text-gradient {
+            background: linear-gradient(135deg, #14b8a6 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .floating {
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Custom scrollbar */
+        textarea::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        textarea::-webkit-scrollbar-track {
+            background: rgba(51, 65, 85, 0.5);
+            border-radius: 3px;
+        }
+        
+        textarea::-webkit-scrollbar-thumb {
+            background: rgba(20, 184, 166, 0.6);
+            border-radius: 3px;
+        }
+        
+        textarea::-webkit-scrollbar-thumb:hover {
+            background: rgba(20, 184, 166, 0.8);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 text-slate-100">
+    
+    <!-- Floating decorative elements -->
+    <div class="fixed inset-0 pointer-events-none z-0">
+        <div class="absolute top-20 left-10 w-4 h-4 bg-primary-400 rounded-full opacity-30 floating" style="animation-delay: 0s;"></div>
+        <div class="absolute top-40 right-20 w-2 h-2 bg-blue-400 rounded-full opacity-40 floating" style="animation-delay: 1s;"></div>
+        <div class="absolute bottom-32 left-1/4 w-3 h-3 bg-purple-400 rounded-full opacity-20 floating" style="animation-delay: 2s;"></div>
+        <div class="absolute bottom-20 right-1/3 w-2 h-2 bg-primary-300 rounded-full opacity-30 floating" style="animation-delay: 3s;"></div>
+    </div>
+
+    <div class="glass-effect p-8 rounded-3xl shadow-2xl w-full max-w-lg mx-4 card-hover animate-fade-in relative z-10">
+        
+        <!-- Header Section -->
+        <div class="text-center mb-8">
+            <div class="mb-4">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-primary-500 to-blue-500 rounded-2xl mb-4 floating">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2m-2-2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2h6zm-6 0V5a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                    </svg>
+                </div>
+            </div>
+            <h1 class="text-4xl font-bold text-gradient mb-3">API Token Dashboard</h1>
+            <div class="w-24 h-1 bg-gradient-to-r from-primary-500 to-blue-500 rounded-full mx-auto mb-4"></div>
+            <p class="text-slate-300 leading-relaxed max-w-sm mx-auto">
+                Token ini digunakan untuk mengakses <span class="font-semibold text-primary-300">Car Price Prediction API</span>.<br>
+                <span class="text-sm text-slate-400">Token bersifat pribadi dan akan disimpan di browser. Jangan dibagikan ke orang lain.</span>
+            </p>
+        </div>
+
+        <!-- Enhanced Message Box -->
+        <div id="message-box" class="hidden mb-6 p-4 rounded-xl text-sm animate-slide-up border-l-4" role="alert">
+            <div class="flex items-center space-x-3">
+                <div id="message-icon" class="flex-shrink-0 w-5 h-5"></div>
+                <span id="message-text" class="font-medium"></span>
+            </div>
+        </div>
+
+        <!-- Enhanced Token Form -->
+        <form id="token-form" class="space-y-6">
+            <div class="space-y-2">
+                <label for="api_key" class="block text-sm font-semibold text-slate-300 mb-2">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2m-2-2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2h6zm-6 0V5a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                        </svg>
+                        <span>API Key</span>
+                    </div>
+                </label>
+                <input type="password" id="api_key" name="api_key" 
+                       class="w-full px-4 py-3 bg-dark-800/50 border border-slate-600/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-400 text-white placeholder-slate-400 transition-all duration-300 input-glow" 
+                       placeholder="Masukkan API key Anda" required>
+            </div>
+
+            <button type="submit" 
+                    class="w-full button-gradient text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 group">
+                <svg class="w-5 h-5 group-hover:rotate-12 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+                <span>Generate Token</span>
+            </button>
+        </form>
+
+        <!-- Enhanced Token Display -->
+        <div id="token-display" class="mt-8 hidden animate-slide-up">
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <label for="access_token" class="flex items-center space-x-2 text-sm font-semibold text-slate-300">
+                        <svg class="w-4 h-4 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                        </svg>
+                        <span>Access Token</span>
+                    </label>
+                    <div class="flex items-center space-x-1 text-xs text-green-400">
+                        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span>Active</span>
+                    </div>
+                </div>
+                
+                <div class="relative group">
+                    <textarea id="access_token" rows="4" readonly 
+                              class="w-full p-4 pr-14 bg-dark-800/70 border border-slate-600/50 rounded-xl text-white font-mono text-sm resize-none focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300"></textarea>
+                    <button id="copy-button" class="absolute top-3 right-3 p-2 text-slate-400 hover:text-primary-400 hover:bg-primary-500/10 rounded-lg transition-all duration-300 group" title="Copy Token">
+                        <svg class="w-5 h-5 group-hover:scale-110 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <p class="text-sm text-slate-400 text-center flex items-center justify-center space-x-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <span>Klik ikon untuk menyalin token ke clipboard</span>
+                </p>
+                
+                <div class="pt-4 border-t border-slate-700/50">
+                    <button onclick="window.location.href='/'" 
+                            class="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-xl transition-all duration-300 flex items-center justify-center space-x-2 group transform hover:scale-[1.02]">
+                        <svg class="w-5 h-5 group-hover:-translate-x-1 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"></path>
+                        </svg>
+                        <span>Kembali ke Prediksi</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tokenDisplay = document.getElementById('token-display');
+        const accessTokenTextarea = document.getElementById('access_token');
+        const messageBox = document.getElementById('message-box');
+        const messageIcon = document.getElementById('message-icon');
+        const messageText = document.getElementById('message-text');
+        const tokenForm = document.getElementById('token-form');
+
+        // Auto-detect token with enhanced animation
+        const savedToken = localStorage.getItem("access_token");
+        if (savedToken) {
+            accessTokenTextarea.value = savedToken;
+            
+            // Animate token display appearance
+            setTimeout(() => {
+                tokenDisplay.classList.remove('hidden');
+                tokenForm.style.display = 'none';
+                showMessage("Token sudah tersedia. Gunakan token ini atau generate baru.", "success", "🔑");
+            }, 300);
+        }
+
+        // Enhanced generate token with loading states
+        tokenForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const apiKey = document.getElementById('api_key').value;
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            const buttonText = submitButton.querySelector('span');
+            const buttonIcon = submitButton.querySelector('svg');
+
+            // Loading state
+            submitButton.disabled = true;
+            submitButton.classList.add('opacity-75', 'cursor-not-allowed');
+            buttonText.textContent = 'Generating...';
+            buttonIcon.classList.add('animate-spin');
+
+            tokenDisplay.classList.add('hidden');
+            hideMessage();
+
+            try {
+                const response = await fetch('/token', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ api_key: apiKey })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Success animation
+                    accessTokenTextarea.value = data.access_token;
+                    localStorage.setItem("access_token", data.access_token);
+                    
+                    setTimeout(() => {
+                        tokenDisplay.classList.remove('hidden');
+                        tokenForm.style.display = 'none';
+                        showMessage("Token berhasil dibuat dan disimpan!", "success", "✨");
+                    }, 300);
+                    
+                } else {
+                    throw new Error(data.detail || "Gagal membuat token");
+                }
+            } catch (err) {
+                console.error(err);
+                showMessage(err.message, "error", "⚠️");
+            } finally {
+                // Reset button state
+                submitButton.disabled = false;
+                submitButton.classList.remove('opacity-75', 'cursor-not-allowed');
+                buttonText.textContent = 'Generate Token';
+                buttonIcon.classList.remove('animate-spin');
+            }
+        });
+
+        // Enhanced copy token with better feedback
+        document.getElementById('copy-button').addEventListener('click', async () => {
+            const copyButton = document.getElementById('copy-button');
+            const copyIcon = copyButton.querySelector('svg');
+            
+            try {
+                await navigator.clipboard.writeText(accessTokenTextarea.value);
+                
+                // Success animation
+                copyIcon.innerHTML = `
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                `;
+                copyButton.classList.add('text-green-400');
+                
+                showMessage("Token berhasil disalin ke clipboard!", "success", "📋");
+                
+                // Reset icon after 2 seconds
+                setTimeout(() => {
+                    copyIcon.innerHTML = `
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    `;
+                    copyButton.classList.remove('text-green-400');
+                }, 2000);
+                
+            } catch (err) {
+                // Fallback for older browsers
+                accessTokenTextarea.select();
+                document.execCommand('copy');
+                showMessage("Token disalin ke clipboard!", "success", "📋");
+            }
+        });
+
+        // Enhanced message system with icons and animations
+        function showMessage(msg, type, emoji = "") {
+            messageText.textContent = msg;
+            messageBox.classList.remove('hidden');
+            
+            // Remove old classes
+            messageBox.classList.remove(
+                'bg-green-500/20', 'border-green-400', 'text-green-300',
+                'bg-red-500/20', 'border-red-400', 'text-red-300',
+                'bg-blue-500/20', 'border-blue-400', 'text-blue-300'
+            );
+            
+            // Add new classes based on type
+            if (type === 'success') {
+                messageBox.classList.add('bg-green-500/20', 'border-green-400', 'text-green-300');
+                messageIcon.innerHTML = `
+                    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                `;
+            } else if (type === 'error') {
+                messageBox.classList.add('bg-red-500/20', 'border-red-400', 'text-red-300');
+                messageIcon.innerHTML = `
+                    <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                `;
+            } else {
+                messageBox.classList.add('bg-blue-500/20', 'border-blue-400', 'text-blue-300');
+                messageIcon.innerHTML = `
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                `;
+            }
+            
+            // Auto hide after 5 seconds
+            setTimeout(() => hideMessage(), 5000);
+        }
+
+        function hideMessage() {
+            messageBox.classList.add('hidden');
+        }
+
+        // Add subtle parallax effect to floating elements
+        document.addEventListener('mousemove', (e) => {
+            const floatingElements = document.querySelectorAll('.floating');
+            const { clientX, clientY } = e;
+            const { innerWidth, innerHeight } = window;
+            
+            floatingElements.forEach((element, index) => {
+                const speed = (index + 1) * 0.02;
+                const x = (clientX - innerWidth / 2) * speed;
+                const y = (clientY - innerHeight / 2) * speed;
+                
+                element.style.transform = `translate(${x}px, ${y}px)`;
+            });
+        });
+
+        // Add entry animation
+        document.addEventListener('DOMContentLoaded', () => {
+            const mainCard = document.querySelector('.glass-effect');
+            mainCard.style.opacity = '0';
+            mainCard.style.transform = 'translateY(20px) scale(0.95)';
+            
+            setTimeout(() => {
+                mainCard.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+                mainCard.style.opacity = '1';
+                mainCard.style.transform = 'translateY(0) scale(1)';
+            }, 100);
+        });
+    </script>
+</body>
+</html>

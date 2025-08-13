@@ -91,16 +91,12 @@ async def startup_event():
         # Continue startup even if model loading fails
 
 @app.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-@app.get("/predict_dashboard")
 async def serve_predict_dashboard():
-    return FileResponse("static/predict_dashboard/index.html")
+    return FileResponse("static/index.html")
 
 @app.get("/token-dashboard", include_in_schema=False)
 async def token_dashboard():
-    return FileResponse("static/token_dashboard.html")
+    return FileResponse("static/token-dashboard.html")
 
 @app.post("/token")
 async def get_token(api_key: str = Body(..., embed=True)):
