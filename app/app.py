@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException, status, Body, Depends
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.openapi.utils import get_openapi
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from typing import List
@@ -24,9 +25,72 @@ from auth import create_access_token, verify_token
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Car Price Prediction API",
-              description="API for car price prediction model management",
-              version="1.0.0")
+# Custom OpenAPI schema function
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    
+    openapi_schema = get_openapi(
+        title="Car Price Prediction API",
+        version="1.0.0",
+        description="""
+Features
+- **Single Prediction**: Get price prediction for individual cars
+- **Batch Prediction**: Process multiple car predictions efficiently
+- **Model Management**: Update and rollback ML models seamlessly
+- **Health Monitoring**: Real-time system health checks
+- **Secure Authentication**: Token-based API access
+
+Authentication
+All prediction endpoints require Bearer token authentication. 
+Use the `/token` endpoint to obtain an access token with your API key.
+        """,
+        routes=app.routes,
+        tags=[
+            {
+                "name": "Authentication",
+                "description": "Endpoints for obtaining and managing API access tokens"
+            },
+            {
+                "name": "Predictions",
+                "description": "Core prediction endpoints for single and batch car price predictions"
+            },
+            {
+                "name": "Model Management",
+                "description": "Endpoints for managing ML models, including updates and rollbacks"
+            },
+            {
+                "name": "System Health",
+                "description": "Health check and system monitoring endpoints"
+            }
+        ]
+    )
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+# Initialize FastAPI with enhanced configuration
+app = FastAPI(
+    title="Car Price Prediction API",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json",
+    swagger_ui_parameters={
+        "defaultModelsExpandDepth": 2,
+        "defaultModelExpandDepth": 2,
+        "displayOperationId": False,
+        "displayRequestDuration": True,
+        "docExpansion": "list",
+        "filter": True,
+        "showExtensions": True,
+        "showCommonExtensions": True,
+        "syntaxHighlight.theme": "tomorrow-night"
+    }
+)
+
+# Set custom OpenAPI schema
+app.openapi = custom_openapi
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 Instrumentator().instrument(app).expose(app)
@@ -90,15 +154,29 @@ async def startup_event():
         logger.error(f"Failed to load model during startup: {str(e)}")
         # Continue startup even if model loading fails
 
-@app.get("/")
+@app.get("/",
+         include_in_schema=False,
+         tags=["Dashboard"])
 async def serve_predict_dashboard():
     return FileResponse("static/index.html")
 
-@app.get("/token-dashboard", include_in_schema=False)
+@app.get("/token-dashboard", 
+         include_in_schema=False,
+         tags=["Dashboard"])
 async def token_dashboard():
     return FileResponse("static/token-dashboard.html")
 
-@app.post("/token")
+@app.post("/token",
+          tags=["Authentication"],
+          summary="Get Access Token",
+          description="""
+# Obtain a Bearer token for API authentication.
+
+**Required**: Valid API key in request body
+
+**Returns**: JWT access token for subsequent API calls
+          """,
+          response_description="Access token and token type")
 async def get_token(api_key: str = Body(..., embed=True)):
     """Endpoint untuk mendapatkan token akses"""
     if api_key != os.getenv("API_KEY"):
@@ -106,7 +184,21 @@ async def get_token(api_key: str = Body(..., embed=True)):
     access_token = create_access_token(data={"sub": "api_client"})
     return {"access_token": access_token, "token_type": "bearer"}
 
-@app.post("/predict", response_model=PredictionResponse)
+@app.post("/predict", 
+          response_model=PredictionResponse, 
+          dependencies=[Depends(verify_token)],
+          tags=["Predictions"],
+          summary="Single Car Price Prediction",
+          description="""
+# Predict the price of a single car based on its features.
+
+**Authentication Required**: Bearer token
+
+**Input**: Car specifications
+
+**Output**: Predicted price with confidence segment and model metadata
+          """,
+          response_description="Prediction result with price and metadata")
 async def predict(request: PredictionRequest):
     """Endpoint untuk prediksi tunggal"""
     try:
@@ -144,7 +236,23 @@ async def predict(request: PredictionRequest):
             detail=f"Prediction failed: {str(e)}"
         )
 
-@app.post("/batch-predict", response_model=List[BatchPredictionResponse])
+@app.post("/batch-predict", 
+          response_model=List[BatchPredictionResponse], 
+          dependencies=[Depends(verify_token)],
+          tags=["Predictions"],
+          summary="Batch Car Price Predictions",
+          description="""
+# Predict prices for multiple cars in a single request.
+
+**Authentication Required**: Bearer token
+
+**Input**: Array of car specifications
+
+**Output**: Array of predictions with individual IDs and metadata
+
+**Performance**: Optimized for processing multiple predictions efficiently
+          """,
+          response_description="List of prediction results with IDs")
 async def batch_predict(requests: List[PredictionRequest]):
     """Endpoint untuk prediksi batch"""
     try:
@@ -186,7 +294,16 @@ async def batch_predict(requests: List[PredictionRequest]):
             detail=f"Batch prediction failed: {str(e)}"
         )
 
-@app.get("/model/metadata", response_model=ModelMetadataResponse)
+@app.get("/model/metadata", 
+         response_model=ModelMetadataResponse,
+         tags=["Model Management"],
+         summary="Get Model Metadata",
+         description="""
+# Retrieve detailed metadata about the currently active model.
+
+**Returns**: Model information including version, training date, metrics, and parameters
+         """,
+         response_description="Comprehensive model metadata")
 async def get_model_metadata():
     """Mengambil metadata model aktif dari MLflow"""
     try:
@@ -222,7 +339,22 @@ async def get_model_metadata():
             detail=f"Failed to fetch model metadata: {str(e)}"
         )
     
-@app.get("/health", response_model=HealthCheckResponse)
+@app.get("/health", 
+         response_model=HealthCheckResponse,
+         tags=["System Health"],
+         summary="System Health Check",
+         description="""
+# Health check for the API and all dependencies.
+
+**Monitors**: 
+- MLflow connection status
+- Database connectivity
+- Model loading status
+- Overall system health
+
+**Response Time**: Includes API response time measurement
+         """,
+         response_description="Detailed health status of all system components")
 async def health_check():
     """Health check API dan dependencies"""
     start_time = time.time()
@@ -256,7 +388,24 @@ async def health_check():
         "response_time_ms": (time.time() - start_time) * 1000
     }
 
-@app.post("/model/update", response_model=ModelUpdateResponse, dependencies=[Depends(verify_token)])
+@app.post("/model/update", 
+          response_model=ModelUpdateResponse, 
+          dependencies=[Depends(verify_token)],
+          tags=["Model Management"],
+          summary="Update Production Model",
+          description="""
+# Promote a model from Staging to Production and reload the active model.
+
+**Authentication Required**: Bearer token
+
+**Process**:
+1. Promotes specified model version from Staging to Production
+2. Archives the previous Production model
+3. Reloads the new model into memory
+
+**Use Case**: Deploy new model versions to production
+          """,
+          response_description="Update confirmation with new model version")
 async def update_model(request: ModelUpdateRequest):
     """Promote model Staging ke Production dan reload model"""
     try:
@@ -297,7 +446,24 @@ async def update_model(request: ModelUpdateRequest):
             detail=f"Update model failed: {str(e)}"
         )
 
-@app.post("/model/rollback", response_model=ModelUpdateResponse, dependencies=[Depends(verify_token)])
+@app.post("/model/rollback", 
+          response_model=ModelUpdateResponse, 
+          dependencies=[Depends(verify_token)],
+          tags=["Model Management"],
+          summary="Rollback to Previous Model",
+          description="""
+# Rollback to a previously archived model version and reload the active model.
+
+**Authentication Required**: Bearer token
+
+**Process**:
+1. Promotes specified archived model version to Production
+2. Archives the current Production model
+3. Reloads the rollback model into memory
+
+**Use Case**: Restore previous model version in case of issues
+          """,
+          response_description="Rollback confirmation with restored model version")
 async def rollback_model(request: ModelUpdateRequest):
     """Rollback model Archived ke versi tertentu dan reload model"""
     try:
