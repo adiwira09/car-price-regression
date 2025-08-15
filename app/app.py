@@ -98,6 +98,13 @@ Instrumentator().instrument(app).expose(app)
 async def load_model():
     """Load the latest production model into memory"""
     try:
+        if not hasattr(app.state, "client") or app.state.client is None:
+            logger.warning("MLflow client is not initialized")
+            app.state.model = None
+            app.state.model_version = None
+            app.state.model_run_id = None
+            return
+
         client = app.state.client
         model_name = app.state.model_name
         
@@ -136,7 +143,6 @@ async def load_model():
         app.state.model = None
         app.state.model_version = None
         app.state.model_run_id = None
-        raise
 
 @app.on_event("startup")
 async def startup_event():
@@ -387,6 +393,59 @@ async def health_check():
         "timestamp": datetime.utcnow().isoformat() + "Z",
         "response_time_ms": (time.time() - start_time) * 1000
     }
+
+@app.post("/model/load", 
+          tags=["Model Management"],
+          summary="Load Model by Name",
+          description="""
+# Load a model from MLflow by name without changing its stage.
+
+**Use Case**: 
+- Switch between different models (e.g., Random_Forest_Regressor ↔ Linear_Regression)
+- Useful when models are in different registries but both have Production versions.
+
+**Notes**:
+- This does not promote or rollback models in MLflow.
+- By default, loads the latest version in Production stage.
+          """)
+async def load_model_by_name(model_name: str = Body(..., embed=True), stage: str = Body("Production", embed=True)):
+    """
+    Load a specific model by name and stage without changing its stage in MLflow.
+    """
+    try:
+        app.state.model_name = model_name
+
+        # Ambil model dari stage yang diminta (default Production)
+        latest_versions = app.state.client.get_latest_versions(model_name, stages=[stage])
+        if not latest_versions:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Model {model_name} not found in stage '{stage}'"
+            )
+
+        # Paksa load model sesuai stage
+        await load_model()
+
+        if app.state.model is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=f"Failed to load model {model_name} from stage '{stage}'"
+            )
+
+        return {
+            "message": f"Model {model_name} loaded successfully from {stage} stage",
+            "model_name": app.state.model_name,
+            "model_version": app.state.model_version
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to load model by name: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to load model: {str(e)}"
+        )
 
 @app.post("/model/update", 
           response_model=ModelUpdateResponse, 
