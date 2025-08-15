@@ -17,7 +17,7 @@ class PredictionRequest(BaseModel):
     aspiration: Literal['std', 'turbo']
     doornumber: Literal['two', 'four']
     carbody: Literal['sedan', 'hatchback', 'wagon', 'hardtop', 'convertible']
-    drivewheel: Literal['fwd', 'rwd', 'awd']
+    drivewheel: Literal['fwd', 'rwd', '4wd']
     enginetype: Literal['ohc', 'ohcf', 'ohcv', 'dohc', 'l', 'rotor', 'dohcv']
     cylindernumber: Literal['four', 'six', 'five', 'eight', 'two', 'twelve', 'three']
     fuelsystem: Literal['mpfi', '2bbl', 'idi', '1bbl', 'spdi', '4bbl', 'mfi', 'spfi']
