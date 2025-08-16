@@ -21,5 +21,5 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            cd /home/ubuntu/fastapi-app
+            cd /home/ubuntu/car-price-prediction
             git pull origin main
