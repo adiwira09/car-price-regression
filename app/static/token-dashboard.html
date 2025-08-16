@@ -271,18 +271,59 @@
         const messageText = document.getElementById('message-text');
         const tokenForm = document.getElementById('token-form');
 
-        // Auto-detect token with enhanced animation
-        const savedToken = localStorage.getItem("access_token");
-        if (savedToken) {
-            accessTokenTextarea.value = savedToken;
+        // Enhanced token validation and auto-detect with expiration check
+        async function validateExistingToken() {
+            const savedToken = localStorage.getItem("access_token");
+            if (!savedToken) {
+                return false;
+            }
             
-            // Animate token display appearance
-            setTimeout(() => {
-                tokenDisplay.classList.remove('hidden');
-                tokenForm.style.display = 'none';
-                showMessage("Token sudah tersedia. Gunakan token ini atau generate baru.", "success", "🔑");
-            }, 300);
+            try {
+                // Test token validity with a simple API call
+                const response = await fetch('/validate-token', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + savedToken
+                    }
+                });
+                
+                if (response.ok) {
+                    return true;
+                } else if (response.status === 401 || response.status === 403) {
+                    // Token is invalid or expired
+                    localStorage.removeItem("access_token");
+                    showMessage("Token sebelumnya telah kedaluwarsa. Silakan generate token baru.", "warning", "⚠️");
+                    return false;
+                }
+            } catch (error) {
+                console.warn('Token validation error:', error);
+                // On network error, assume token might still be valid
+                return true;
+            }
+            
+            return false;
         }
+        
+        // Auto-detect and validate token with enhanced animation
+        validateExistingToken().then(isValid => {
+            const savedToken = localStorage.getItem("access_token");
+            
+            if (savedToken && isValid) {
+                accessTokenTextarea.value = savedToken;
+                
+                // Animate token display appearance
+                setTimeout(() => {
+                    tokenDisplay.classList.remove('hidden');
+                    tokenForm.style.display = 'none';
+                    showMessage("Token sudah tersedia dan masih valid. Gunakan token ini atau generate baru.", "success", "🔑");
+                }, 300);
+            } else if (savedToken && !isValid) {
+                // Token exists but is invalid - clear form and show warning
+                setTimeout(() => {
+                    showMessage("Token sebelumnya tidak valid. Silakan generate token baru.", "warning", "⚠️");
+                }, 300);
+            }
+        });
 
         // Enhanced generate token with loading states
         tokenForm.addEventListener('submit', async (e) => {

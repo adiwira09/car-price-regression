@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Car Price Prediction</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -110,11 +111,6 @@
             animation: slideInUp 0.6s ease-out;
         }
 
-        /* Perubahan warna placeholder untuk aksesibilitas */
-        ::placeholder {
-            color: rgba(203, 213, 225, 0.85); /* lebih terang dari sebelumnya */
-        }
-
         /* Modal styling */
         .modal-bg {
             position: fixed;
@@ -152,7 +148,7 @@
             border-radius: 3px;
         }
 
-        /* Tombol kembali ke atas */
+        /* Back to top button */
         #back-to-top {
             position: fixed;
             bottom: 2rem;
@@ -164,6 +160,7 @@
             padding: 0.75rem 1rem;
             box-shadow: 0 4px 12px rgba(0,0,0,0.3);
             transition: transform 0.2s;
+            z-index: 10;
         }
         #back-to-top:hover {
             transform: translateY(-2px);
@@ -202,15 +199,6 @@
             }
         }
         
-        .floating-icon {
-            animation: float 3s ease-in-out infinite;
-        }
-        
-        @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-        }
-        
         .message-success {
             background: linear-gradient(135deg, rgba(34, 197, 94, 0.9), rgba(16, 185, 129, 0.9));
             border-left: 4px solid #10b981;
@@ -238,19 +226,241 @@
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(20, 184, 166, 0.7);
         }
+
+        /* Tab styling */
+        .tab-button {
+            padding: 0.75rem 1.5rem;
+            font-weight: 500;
+            color: rgba(203, 213, 225, 0.7);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 0.75rem;
+            font-size: 0.9rem;
+        }
+
+        .tab-button:hover {
+            color: rgba(203, 213, 225, 0.9);
+            background: rgba(148, 163, 184, 0.1);
+        }
+
+        .tab-button.active {
+            color: white;
+            background: rgba(20, 184, 166, 0.15);
+            font-weight: 600;
+            border: 1px solid rgba(20, 184, 166, 0.3);
+        }
+
+        /* Upload area styling */
+        .upload-area {
+            border: 2px dashed rgba(148, 163, 184, 0.3);
+            border-radius: 1rem;
+            padding: 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #14b8a6;
+            background: rgba(20, 184, 166, 0.05);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(20, 184, 166, 0.15);
+        }
+
+        .upload-area.dragover {
+            border-color: #14b8a6;
+            background: rgba(20, 184, 166, 0.1);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 35px rgba(20, 184, 166, 0.25);
+        }
+
+        /* Enhanced button styles */
+        .btn-primary {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary:disabled {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-primary:not(:disabled):hover {
+            transform: translateY(-2px) scale(1.02);
+        }
+
+        /* Step indicator animation */
+        .step-indicator {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Enhanced loading animation */
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.8);
+                opacity: 1;
+            }
+            100% {
+                transform: scale(2.4);
+                opacity: 0;
+            }
+        }
+
+        .loading-ring::before {
+            content: '';
+            position: absolute;
+            border: 2px solid #14b8a6;
+            border-radius: 50%;
+            width: 100%;
+            height: 100%;
+            animation: pulse-ring 2s infinite;
+        }
+
+        /* Enhanced Table styling */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 0.75rem;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(51, 65, 85, 0.95));
+            color: rgba(203, 213, 225, 0.95);
+            font-weight: 600;
+            padding: 1rem 0.75rem;
+            text-align: center;
+            border-bottom: 2px solid rgba(148, 163, 184, 0.2);
+            font-size: 0.875rem;
+            letter-spacing: 0.025em;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .data-table td {
+            padding: 0.875rem 0.75rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+            color: rgba(203, 213, 225, 0.85);
+            font-size: 0.875rem;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tbody tr:hover td {
+            background: rgba(30, 41, 59, 0.5);
+        }
+
+        .data-table tbody tr:nth-child(even) {
+            background: rgba(15, 23, 42, 0.3);
+        }
+
+        .data-table tbody tr:nth-child(odd) {
+            background: rgba(30, 41, 59, 0.1);
+        }
+
+        /* Enhanced preview containers */
+        .preview-container {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+
+        .preview-header {
+            background: rgba(30, 41, 59, 0.8);
+            border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+            padding: 1rem;
+        }
+
+        .preview-content {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .max-h-500 {
+            max-height: 500px;
+        }
+
+        .preview-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .preview-content::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.3);
+        }
+
+        .preview-content::-webkit-scrollbar-thumb {
+            background: rgba(20, 184, 166, 0.5);
+            border-radius: 3px;
+        }
+
+        .preview-footer {
+            background: rgba(30, 41, 59, 0.4);
+            border-top: 1px solid rgba(148, 163, 184, 0.08);
+            padding: 0.75rem 1.25rem;
+        }
+
+        /* Spinner animation */
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(20, 184, 166, 0.3);
+            border-top-color: #14b8a6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Token status styling */
+        .token-status-container {
+            backdrop-filter: blur(8px);
+            background: rgba(15, 23, 42, 0.7);
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            border: 1px solid rgba(148, 163, 184, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        @media (max-width: 1024px) {
+            .token-status-container {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen p-4">
     <div id="token-modal" class="modal-bg hidden">
         <div class="modal-content">
             <h2 class="text-2xl font-bold mb-4">Token Tidak Ditemukan</h2>
-            <p class="text-slate-300 mb-4">
+            <p class="text-slate-300 mb-6">
                 Untuk menggunakan fitur prediksi, token akses diperlukan.<br>
                 Silakan menuju ke <strong>Token Dashboard</strong> untuk membuat token baru.
             </p>
-            <button onclick="window.location.href='/token-dashboard'" class="btn-primary px-6 py-2 rounded-lg">
-                Buka Token Dashboard
-            </button>
+            <div class="flex flex-col gap-3">
+                <button onclick="window.location.href='/token-dashboard'" class="btn-primary px-6 py-3 rounded-lg font-semibold">
+                    <span class="flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2m-2-2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2h6zm-6 0V5a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                        </svg>
+                        Buka Token Dashboard
+                    </span>
+                </button>
+                <button onclick="document.getElementById('token-modal').classList.add('hidden')" class="px-6 py-2 rounded-lg font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-700/50 transition-all">
+                    Tutup
+                </button>
+            </div>
         </div>
     </div>
     <div class="progress-container">
@@ -258,15 +468,53 @@
     </div>
     <div class="glass-card rounded-3xl w-full max-w-5xl mx-auto p-6 md:p-8 lg:p-12 fade-in">
         <!-- Header Section -->
-        <div class="text-center mb-8 lg:mb-12">
-            <div class="floating-icon text-6xl mb-4">🚗</div>
-            <h1 class="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-teal-400 via-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
-                Car Price Prediction
-            </h1>
-            <p class="text-slate-300 text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed">
-                Dapatkan estimasi harga mobil yang akurat dengan teknologi AI terdepan
-            </p>
-            <div class="w-24 h-1 bg-gradient-to-r from-teal-400 to-blue-400 mx-auto mt-6 rounded-full"></div>
+        <div class="text-center mb-6 lg:mb-8">
+            <!-- Main Header Content - Perfectly Centered -->
+            <div class="mb-6">
+                <h1 class="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-teal-400 via-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
+                    Car Price Prediction
+                </h1>
+                <p class="text-slate-300 text-lg lg:text-xl max-w-2xl mx-auto leading-relaxed">
+                    Dapatkan estimasi harga mobil yang akurat dengan teknologi AI terdepan
+                </p>
+            </div>
+            
+            <!-- Token Status & Actions - Below header -->
+            <div class="hidden lg:flex justify-center items-center mb-6">
+                <div class="token-status-container flex items-center space-x-4">
+                    <div id="token-status" class="flex items-center space-x-2 text-sm">
+                        <div id="token-indicator" class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span id="token-status-text" class="text-slate-400">Token Valid</span>
+                    </div>
+                    <div class="w-px h-4 bg-slate-600"></div>
+                    <div class="flex space-x-2">
+                        <button id="refresh-token-btn" onclick="refreshTokenStatus()" class="px-3 py-1 text-xs bg-slate-700/50 hover:bg-slate-600/50 text-slate-300 rounded-lg transition-all duration-200 flex items-center space-x-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                            <span>Refresh</span>
+                        </button>
+                        <button onclick="window.location.href='/token-dashboard'" class="px-3 py-1 text-xs bg-teal-600/20 hover:bg-teal-600/30 text-teal-400 rounded-lg transition-all duration-200 flex items-center space-x-1">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m0 0a2 2 0 012 2m-2-2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9a2 2 0 012-2h6zm-6 0V5a2 2 0 012-2h4a2 2 0 012 2v2"></path>
+                            </svg>
+                            <span>Token</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="flex justify-center mb-6">
+            <div class="bg-slate-800/30 backdrop-filter backdrop-blur-sm p-1 rounded-xl border border-slate-700/50">
+                <button id="single-tab" class="tab-button active">
+                    Single Prediction
+                </button>
+                <button id="batch-tab" class="tab-button">
+                    Batch Prediction
+                </button>
+            </div>
         </div>
 
         <!-- Message Box -->
@@ -277,8 +525,8 @@
             </div>
         </div>
 
-        <!-- Main Form -->
-        <form id="predict-form" class="space-y-8">
+        <!-- Single Prediction Form -->
+        <form id="single-form" class="space-y-8">
             <!-- Numeric Specifications -->
             <div class="space-y-4">
                 <h3 class="text-xl font-semibold text-slate-200 flex items-center space-x-2">
@@ -407,7 +655,7 @@
                             <option value="">Pilih sistem penggerak</option>
                             <option value="fwd">Front Wheel Drive</option>
                             <option value="rwd">Rear Wheel Drive</option>
-                            <option value="awd">All Wheel Drive</option>
+                            <option value="4wd">Four Wheel Drive</option>
                         </select>
                     </div>
                     <div class="space-y-1">
@@ -461,10 +709,272 @@
             </div>
         </form>
 
-        <!-- Result Section -->
+        <!-- Batch Prediction Form -->
+        <div id="batch-form" class="hidden space-y-8">
+            <!-- Step Indicator -->
+            <div class="flex items-center justify-center mb-8">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center">
+                        <div id="step1" class="w-8 h-8 bg-teal-500 text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
+                        <span class="ml-2 text-sm font-medium text-slate-300">Upload File</span>
+                    </div>
+                    <div class="w-8 h-0.5 bg-slate-600"></div>
+                    <div class="flex items-center">
+                        <div id="step2" class="w-8 h-8 bg-slate-600 text-slate-400 rounded-full flex items-center justify-center text-sm font-bold">2</div>
+                        <span class="ml-2 text-sm font-medium text-slate-500">Preview</span>
+                    </div>
+                    <div class="w-8 h-0.5 bg-slate-600"></div>
+                    <div class="flex items-center">
+                        <div id="step3" class="w-8 h-8 bg-slate-600 text-slate-400 rounded-full flex items-center justify-center text-sm font-bold">3</div>
+                        <span class="ml-2 text-sm font-medium text-slate-500">Process</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upload Area -->
+            <div id="upload-container" class="upload-area relative overflow-hidden">
+                <!-- Animated background pattern -->
+                <div class="absolute inset-0 opacity-5">
+                    <div class="absolute top-4 left-4 w-2 h-2 bg-teal-400 rounded-full animate-pulse"></div>
+                    <div class="absolute top-8 right-8 w-1 h-1 bg-blue-400 rounded-full animate-pulse" style="animation-delay: 0.5s;"></div>
+                    <div class="absolute bottom-6 left-12 w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse" style="animation-delay: 1s;"></div>
+                    <div class="absolute bottom-4 right-6 w-1 h-1 bg-green-400 rounded-full animate-pulse" style="animation-delay: 1.5s;"></div>
+                </div>
+                
+                <div class="relative z-10">
+                    <div class="mx-auto w-20 h-20 bg-gradient-to-br from-slate-800 to-slate-700 rounded-full flex items-center justify-center mb-6 shadow-lg border border-slate-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                    </div>
+                    <input type="file" id="csv-upload" accept=".csv,.xlsx,.xls" class="hidden">
+                    <label for="csv-upload" class="cursor-pointer block text-center">
+                        <h3 class="text-xl font-bold text-slate-200 mb-2">Upload CSV/Excel File</h3>
+                        <p class="text-slate-400 mb-6 text-base">Drag & drop file CSV atau Excel, atau klik tombol di bawah untuk memilih</p>
+                        <span class="btn-primary px-8 py-3 rounded-xl inline-block font-semibold text-base shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
+                            Pilih File CSV/Excel
+                        </span>
+                    </label>
+                    <p class="text-xs text-slate-500 mt-4 flex items-center justify-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Format file harus CSV (.csv) atau Excel (.xlsx, .xls) | Maksimal 10MB
+                    </p>
+                </div>
+            </div>
+
+            <!-- Template Download -->
+            <div class="glass-card p-6 rounded-2xl border border-slate-700/50">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-slate-200 text-lg">Template CSV</h4>
+                            <p class="text-sm text-slate-400">Unduh template untuk memastikan format data yang benar</p>
+                        </div>
+                    </div>
+                    <button id="download-template" type="button" class="btn-primary px-6 py-3 rounded-xl text-sm flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        <span>Download Template</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- File Preview -->
+            <div id="file-preview" class="hidden glass-card p-0 rounded-2xl border border-teal-500/30 shadow-2xl overflow-hidden">
+                <!-- Preview Header -->
+                <div class="preview-header">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-teal-500 to-blue-600 rounded-lg flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-slate-200 text-lg">Pratinjau Data Input</h3>
+                                <p class="text-sm text-slate-400">Verifikasi data sebelum diproses</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 bg-slate-800/50 px-3 py-2 rounded-lg">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <span id="file-name" class="text-sm text-slate-300 font-medium"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Preview Content -->
+                <div class="preview-content">
+                    <table class="data-table">
+                        <thead>
+                            <tr id="preview-headers">
+                                <!-- Headers will be populated by JS -->
+                            </tr>
+                        </thead>
+                        <tbody id="preview-data">
+                            <!-- Data will be populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Preview Footer -->
+                <div class="preview-footer">
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-2 text-xs text-slate-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Menampilkan 5 baris pertama
+                        </div>
+                        <div class="flex items-center gap-4">
+                            <div id="file-size" class="flex items-center gap-1 text-xs text-slate-400">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <span></span>
+                            </div>
+                            <div id="validation-status" class="flex items-center gap-2">
+                                <div id="validation-dot" class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                                <span id="validation-text" class="text-xs text-green-400 font-medium">File Valid</span>
+                                <button id="validation-info" type="button" class="ml-1 text-slate-500 hover:text-slate-300 transition-colors" title="Info validasi">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Validation Details (Hidden by default) -->
+                    <div id="validation-details" class="hidden mt-3 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                        <h4 class="text-sm font-medium text-slate-200 mb-2">Detail Validasi Kolom</h4>
+                        <div id="validation-info-content" class="text-xs text-slate-400">
+                            <!-- Content will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="pt-6">
+                <button id="batch-submit" type="button" disabled class="btn-primary w-full py-4 px-8 rounded-xl text-white font-bold text-lg shadow-xl opacity-50 cursor-not-allowed transition-all duration-300">
+                    <span class="relative z-10 flex items-center justify-center gap-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Proses Batch Prediction
+                    </span>
+                </button>
+            </div>
+
+            <!-- Loading State -->
+            <div id="batch-loading" class="hidden">
+                <div class="glass-card p-8 rounded-2xl text-center border border-blue-500/30">
+                    <div class="flex flex-col items-center justify-center">
+                        <!-- Enhanced Loading Animation -->
+                        <div class="relative mb-6">
+                            <div class="w-16 h-16 border-4 border-slate-600 rounded-full"></div>
+                            <div class="absolute top-0 left-0 w-16 h-16 border-4 border-transparent border-t-teal-400 rounded-full animate-spin"></div>
+                            <div class="absolute top-2 left-2 w-12 h-12 border-4 border-transparent border-t-blue-400 rounded-full animate-spin" style="animation-direction: reverse; animation-duration: 1.5s;"></div>
+                        </div>
+                        
+                        <h3 class="text-xl font-bold text-slate-200 mb-2">Memproses File CSV</h3>
+                        <p class="text-slate-400 mb-4">Sedang menganalisis data dan membuat prediksi...</p>
+                        
+                        <!-- Progress Bar -->
+                        <div class="w-full max-w-md bg-slate-700 rounded-full h-2 mb-3">
+                            <div id="batch-progress-bar" class="bg-gradient-to-r from-teal-400 to-blue-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        
+                        <p class="text-sm text-slate-500" id="progress-text">0% selesai</p>
+                        
+                        <!-- Processing Steps -->
+                        <div class="mt-6 flex items-center justify-center space-x-8 text-xs">
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 bg-teal-400 rounded-full animate-pulse"></div>
+                                <span class="text-slate-400">Validasi Data</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 bg-slate-600 rounded-full"></div>
+                                <span class="text-slate-500">Prediksi</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <div class="w-2 h-2 bg-slate-600 rounded-full"></div>
+                                <span class="text-slate-500">Selesai</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Batch Result Section -->
+            <div id="batch-result" class="hidden mt-8 result-card rounded-2xl shadow-2xl overflow-hidden">
+                <!-- Result Header -->
+                <div class="preview-header text-center">
+                    <h2 class="text-2xl lg:text-3xl font-bold text-white mb-2">Hasil Batch Prediction</h2>
+                    <div class="w-16 h-1 bg-gradient-to-r from-teal-400 to-blue-400 mx-auto rounded-full"></div>
+                    
+                    <div class="flex justify-between items-center mt-6">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div class="text-left">
+                                <h3 class="font-bold text-slate-200 text-lg">Hasil Prediksi</h3>
+                                <span class="text-sm text-slate-300">Total diproses: <span id="total-processed" class="font-bold text-teal-400">0</span> data</span>
+                            </div>
+                        </div>
+                        <button id="download-results" type="button" class="btn-primary px-6 py-3 rounded-lg text-sm flex items-center gap-2 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            <span>Unduh Hasil CSV</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Result Content -->
+                <div class="preview-content max-h-500">
+                    <table class="data-table">
+                        <thead>
+                            <tr id="result-headers">
+                                <!-- Result headers will be populated by JS -->
+                            </tr>
+                        </thead>
+                        <tbody id="result-data">
+                            <!-- Result data will be populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Result Footer -->
+                <div class="preview-footer">
+                    <div class="flex justify-center items-center">
+                        <div class="flex items-center gap-2 text-xs text-slate-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Hasil prediksi dapat diunduh dalam format CSV
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Single Prediction Result Section -->
         <div id="result-box" class="mt-8 hidden result-card p-6 lg:p-8 rounded-2xl shadow-2xl">
             <div class="text-center mb-6">
-                <div class="text-4xl mb-3">🎯</div>
                 <h2 class="text-2xl lg:text-3xl font-bold text-white mb-2">Hasil Prediksi</h2>
                 <div class="w-16 h-1 bg-gradient-to-r from-teal-400 to-blue-400 mx-auto rounded-full"></div>
             </div>
@@ -480,14 +990,175 @@
             </div>
         </div>
     </div>
-    <button id="back-to-top">⬆</button>
+    <button id="back-to-top" type="button">⬆</button>
 
     <script>
-        // Check token
-        const token = localStorage.getItem("access_token");
-        if (!token) {
-            document.getElementById("token-modal").classList.remove("hidden");
+        // Enhanced token management with expiration validation
+        let token = localStorage.getItem("access_token");
+        
+        // Function to validate token by making a test API call
+        async function validateToken() {
+            if (!token) {
+                showTokenModal();
+                return false;
+            }
+            
+            try {
+                // Test token validity with a simple API call
+                const response = await fetch('/validate-token', {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+                
+                if (response.ok) {
+                    return true;
+                } else if (response.status === 401 || response.status === 403) {
+                    // Token is invalid or expired
+                    handleTokenExpired();
+                    return false;
+                } else {
+                    // Other errors - maybe network issue, keep token for now
+                    console.warn('Token validation failed with status:', response.status);
+                    return true;
+                }
+            } catch (error) {
+                // Network error - assume token is still valid to avoid disrupting user
+                console.warn('Token validation error:', error);
+                return true;
+            }
         }
+        
+        // Function to refresh token variable from localStorage
+        function refreshTokenFromStorage() {
+            token = localStorage.getItem("access_token");
+        }
+        
+        // Function to update token status UI
+        function updateTokenStatus(isValid) {
+            const indicator = document.getElementById('token-indicator');
+            const statusText = document.getElementById('token-status-text');
+            
+            if (isValid) {
+                indicator.className = 'w-2 h-2 bg-green-400 rounded-full animate-pulse';
+                statusText.textContent = 'Token Valid';
+                statusText.className = 'text-green-400 text-sm font-medium';
+            } else {
+                indicator.className = 'w-2 h-2 bg-red-400 rounded-full animate-pulse';
+                statusText.textContent = 'Token Tidak Valid';
+                statusText.className = 'text-red-400 text-sm font-medium';
+            }
+        }
+        
+        // Function to refresh token status manually
+        async function refreshTokenStatus() {
+            const refreshBtn = document.getElementById('refresh-token-btn');
+            const originalContent = refreshBtn.innerHTML;
+            
+            // Show loading state
+            refreshBtn.innerHTML = `
+                <svg class="w-3 h-3 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span>Checking...</span>
+            `;
+            refreshBtn.disabled = true;
+            
+            try {
+                refreshTokenFromStorage();
+                const isValid = await validateToken();
+                updateTokenStatus(isValid);
+                
+                if (isValid) {
+                    showMessage("Status token berhasil diperbarui - Token valid", "success");
+                } else {
+                    showMessage("Token tidak valid atau telah expired", "error");
+                }
+            } catch (error) {
+                console.error('Error refreshing token status:', error);
+                showMessage("Gagal memeriksa status token", "error");
+            } finally {
+                // Reset button state
+                setTimeout(() => {
+                    refreshBtn.innerHTML = originalContent;
+                    refreshBtn.disabled = false;
+                }, 1000);
+            }
+        }
+        
+        // Function to handle expired/invalid token
+        function handleTokenExpired() {
+            // Clear invalid token from localStorage
+            localStorage.removeItem("access_token");
+            token = null;
+            
+            // Update token status UI
+            updateTokenStatus(false);
+            
+            // Show token modal with expired message
+            showTokenModal(true);
+            
+            // Clear any existing results
+            document.getElementById('result-box').classList.add('hidden');
+            document.getElementById('batch-result').classList.add('hidden');
+            
+            // Show expired token message
+            showMessage("Token telah kedaluwarsa. Silakan generate token baru di Token Dashboard.", "error");
+        }
+        
+        // Function to show token modal with optional expired message
+        function showTokenModal(isExpired = false) {
+            const modal = document.getElementById("token-modal");
+            const modalText = modal.querySelector('p');
+            const modalTitle = modal.querySelector('h2');
+            
+            if (isExpired) {
+                modalTitle.textContent = "Token Telah Kedaluwarsa";
+                modalText.innerHTML = `
+                    Token akses Anda telah kedaluwarsa atau tidak valid.<br>
+                    Silakan menuju ke <strong>Token Dashboard</strong> untuk membuat token baru.
+                `;
+            } else {
+                modalTitle.textContent = "Token Tidak Ditemukan";
+                modalText.innerHTML = `
+                    Untuk menggunakan fitur prediksi, token akses diperlukan.<br>
+                    Silakan menuju ke <strong>Token Dashboard</strong> untuk membuat token baru.
+                `;
+            }
+            
+            modal.classList.remove("hidden");
+        }
+        
+        // Initial token validation
+        validateToken().then(isValid => {
+            updateTokenStatus(isValid);
+        });
+        
+        // Listen for storage changes (when token is updated in another tab)
+        window.addEventListener('storage', function(e) {
+            if (e.key === 'access_token') {
+                if (e.newValue) {
+                    // New token was added/updated
+                    refreshTokenFromStorage();
+                    // Hide token modal if it was showing
+                    document.getElementById("token-modal").classList.add("hidden");
+                    updateTokenStatus(true);
+                    showMessage("Token berhasil diperbarui dari tab lain.", "success");
+                } else {
+                    // Token was removed
+                    updateTokenStatus(false);
+                    handleTokenExpired();
+                }
+            }
+        });
+        
+        // Periodic token validation (every 5 minutes)
+        setInterval(async () => {
+            if (token) {
+                await validateToken();
+            }
+        }, 5 * 60 * 1000);
 
         // Progress bar saat scroll
         window.addEventListener("scroll", () => {
@@ -510,8 +1181,50 @@
             window.scrollTo({ top: 0, behavior: "smooth" });
         });
 
-        document.getElementById('predict-form').addEventListener('submit', async (e) => {
+        // Tab switching
+        document.getElementById('batch-tab').addEventListener('click', () => {
+            document.getElementById('single-form').classList.add('hidden');
+            document.getElementById('batch-form').classList.remove('hidden');
+            document.getElementById('single-tab').classList.remove('active');
+            document.getElementById('batch-tab').classList.add('active');
+            document.getElementById('result-box').classList.add('hidden');
+        });
+
+        document.getElementById('single-tab').addEventListener('click', () => {
+            document.getElementById('single-form').classList.remove('hidden');
+            document.getElementById('batch-form').classList.add('hidden');
+            document.getElementById('single-tab').classList.add('active');
+            document.getElementById('batch-tab').classList.remove('active');
+            // Reset batch form state
+            resetBatchForm();
+        });
+
+        // Function to reset batch form
+        function resetBatchForm() {
+            updateStepIndicator(1);
+            document.getElementById('file-preview').classList.add('hidden');
+            document.getElementById('batch-result').classList.add('hidden');
+            document.getElementById('batch-loading').classList.add('hidden');
+            document.getElementById('batch-submit').classList.remove('hidden');
+            document.getElementById('batch-submit').disabled = true;
+            document.getElementById('batch-submit').classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('csv-upload').value = '';
+            
+            // Reset global variables
+            csvHeaders = [];
+            csvData = [];
+            batchResults = [];
+        }
+
+        // Single Prediction Form Submission
+        document.getElementById('single-form').addEventListener('submit', async (e) => {
             e.preventDefault();
+
+            // Validate token before proceeding
+            const isTokenValid = await validateToken();
+            if (!isTokenValid) {
+                return; // Stop execution if token is invalid
+            }
 
             const formData = new FormData(e.target);
             const data = {};
@@ -542,6 +1255,11 @@
                 const result = await res.json();
 
                 if (!res.ok) {
+                    // Check if it's a token-related error
+                    if (res.status === 401 || res.status === 403) {
+                        handleTokenExpired();
+                        return;
+                    }
                     throw new Error(result.detail || "Prediksi gagal");
                 }
 
@@ -558,7 +1276,7 @@
                 document.getElementById('model-info').textContent = `Model: ${result.model_name} v${result.model_version}`;
 
                 document.getElementById('result-box').classList.remove('hidden');
-                showMessage("✅ Prediksi berhasil! Scroll ke bawah untuk melihat hasil.", "success");
+                showMessage("Prediksi berhasil! Scroll ke bawah untuk melihat hasil.", "success");
                 
                 // Smooth scroll to result
                 setTimeout(() => {
@@ -570,7 +1288,7 @@
 
             } catch (err) {
                 console.error(err);
-                showMessage(`❌ ${err.message}`, "error");
+                showMessage(`Terjadi kesalahan: ${err.message}`, "error");
             } finally {
                 // Reset button
                 submitBtn.innerHTML = originalText;
@@ -578,6 +1296,752 @@
             }
         });
 
+        // Batch Prediction Functionality
+        const uploadContainer = document.getElementById('upload-container');
+        const csvUpload = document.getElementById('csv-upload');
+        const filePreview = document.getElementById('file-preview');
+        const batchSubmit = document.getElementById('batch-submit');
+        const batchLoading = document.getElementById('batch-loading');
+        const batchResult = document.getElementById('batch-result');
+
+        // Global variables to store CSV data
+        let csvHeaders = [];
+        let csvData = [];
+
+        // Drag and drop functionality
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadContainer.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadContainer.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadContainer.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            uploadContainer.classList.add('dragover');
+        }
+
+        function unhighlight() {
+            uploadContainer.classList.remove('dragover');
+        }
+
+        // Handle file drop
+        uploadContainer.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (validateFile(file)) {
+                    csvUpload.files = files;
+                    handleFileUpload(file);
+                }
+            }
+        }
+
+        // Function to validate file columns against required features
+        function validateColumns(headers, requiredFeatures) {
+            const normalizedHeaders = headers.map(h => h.toLowerCase().trim());
+            const normalizedRequired = requiredFeatures.map(f => f.toLowerCase());
+            
+            const missingColumns = [];
+            const extraColumns = [];
+            
+            // Check for missing required columns
+            normalizedRequired.forEach(required => {
+                if (!normalizedHeaders.includes(required)) {
+                    missingColumns.push(required);
+                }
+            });
+            
+            // Check for extra columns (not required by model)
+            normalizedHeaders.forEach(header => {
+                if (!normalizedRequired.includes(header)) {
+                    extraColumns.push(header);
+                }
+            });
+            
+            // If there are missing columns, file is invalid
+            if (missingColumns.length > 0) {
+                return {
+                    isValid: false,
+                    message: `Kolom yang diperlukan tidak ditemukan: ${missingColumns.join(', ')}`,
+                    missingColumns,
+                    extraColumns,
+                    hasAllRequired: false
+                };
+            }
+            
+            // File is valid if it has all required columns
+            return {
+                isValid: true,
+                message: extraColumns.length > 0 
+                    ? `File valid dengan ${extraColumns.length} kolom tambahan yang akan diabaikan`
+                    : "File memiliki semua kolom yang diperlukan",
+                missingColumns: [],
+                extraColumns,
+                hasAllRequired: true
+            };
+        }
+
+        // Function to validate file type and size
+        function validateFile(file) {
+            const allowedTypes = [
+                'text/csv',
+                'application/vnd.ms-excel',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/csv',
+                'text/plain'
+            ];
+            
+            const allowedExtensions = ['.csv', '.xlsx', '.xls'];
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            const fileName = file.name.toLowerCase();
+            const fileSize = (file.size / (1024 * 1024)).toFixed(1); // MB
+            
+            // Check file extension
+            const hasValidExtension = allowedExtensions.some(ext => fileName.endsWith(ext));
+            
+            if (!hasValidExtension) {
+                const fileExt = fileName.split('.').pop();
+                showValidationAlert(
+                    "Format File Tidak Didukung", 
+                    `File dengan ekstensi .${fileExt} tidak dapat diproses. Silakan gunakan file dengan format CSV atau Excel (xlsx/xls) untuk melanjutkan.`,
+                    "warning"
+                );
+                resetFileUpload();
+                return false;
+            }
+            
+            // Check file size
+            if (file.size > maxSize) {
+                showValidationAlert(
+                    "Ukuran File Terlalu Besar", 
+                    `File berukuran ${fileSize} MB melebihi batas maksimal 10 MB. Silakan kompres file atau gunakan data yang lebih kecil.`,
+                    "warning"
+                );
+                resetFileUpload();
+                return false;
+            }
+            
+            // Additional MIME type check
+            if (!allowedTypes.includes(file.type) && !hasValidExtension) {
+                showValidationAlert(
+                    "Tipe File Tidak Valid", 
+                    "File yang dipilih tidak dapat dibaca oleh sistem. Pastikan file dalam format CSV atau Excel yang valid.",
+                    "warning"
+                );
+                resetFileUpload();
+                return false;
+            }
+            
+            // Show success message for valid file
+            showValidationAlert(
+                "File Berhasil Dipilih", 
+                `${file.name} (${fileSize} MB) siap untuk diproses.`,
+                "success"
+            );
+            
+            return true;
+        }
+
+        // Function to reset file upload state
+        function resetFileUpload() {
+            document.getElementById('csv-upload').value = '';
+            document.getElementById('file-preview').classList.add('hidden');
+            document.getElementById('batch-submit').disabled = true;
+            document.getElementById('batch-submit').classList.add('opacity-50', 'cursor-not-allowed');
+            document.getElementById('validation-details').classList.add('hidden');
+            
+            // Reset global variables
+            csvHeaders = [];
+            csvData = [];
+            batchResults = [];
+            
+            updateStepIndicator(1);
+        }
+
+        // Handle file selection
+        csvUpload.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                const file = e.target.files[0];
+                if (validateFile(file)) {
+                    handleFileUpload(file);
+                }
+            }
+        });
+
+        // Download template
+        // Template di-generate di HTML untuk memastikan:
+        // 1. Selalu sinkron dengan requirement model ML
+        // 2. Tidak bergantung pada file eksternal
+        // 3. Mudah maintenance dan deployment
+        // 4. Konsisten di semua environment
+        document.getElementById('download-template').addEventListener('click', (e) => {
+            e.preventDefault();
+
+            // Template headers (must match ML model requirements)
+            const headers = [
+                'wheelbase', 'carlength', 'carwidth', 'curbweight',
+                'enginesize', 'boreratio', 'horsepower', 'CompanyName',
+                'citympg', 'highwaympg', 'fueltype', 'aspiration',
+                'doornumber', 'carbody', 'drivewheel', 'enginetype',
+                'cylindernumber', 'fuelsystem'
+            ];
+            
+            // sample data rows
+            const sampleDataRows = [
+                [
+                    '103.5', '189.0', '66.9', '3230',
+                    '209', '3.62', '182', 'bmw',
+                    '16', '22', 'gas', 'std',
+                    'four', 'sedan', 'rwd', 'ohc',
+                    'six', 'mpfi'
+                ],
+                [
+                    '99.5', '178.2', '67.9', '3053',
+                    '131', '3.13', '160', 'audi',
+                    '16', '22', 'gas', 'turbo',
+                    'two', 'hatchback', 'fwd', 'ohc',
+                    'five', 'mpfi'
+                ],
+                [
+                    '97.2', '173.4', '65.2', '2302',
+                    '120', '3.33', '97', 'nissan',
+                    '27', '34', 'gas', 'std',
+                    'four', 'sedan', 'bmw', 'ohc',
+                    'four', '2bbl'
+                ],
+                [
+                    '99.1', '186.6', '66.5', '2658',
+                    '121', '3.54', '110', 'saab',
+                    '21', '28', 'gas', 'std',
+                    'two', 'hatchback', 'fwd', 'ohc',
+                    'four', 'mpfi'
+                ]
+            ];
+
+            let csvContent = headers.join(',') + '\n';
+            
+            sampleDataRows.forEach(row => {
+                csvContent += row.join(',') + '\n';
+            });
+            
+            // create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'car_price_template.csv');
+            link.style.display = 'none';
+
+            document.body.appendChild(link);
+            link.click();
+
+            // Cleanup
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+            
+            // Show success message
+            showValidationAlert(
+                "Template Berhasil Diunduh", 
+                "Template CSV dengan 4 contoh data mobil real telah diunduh. Template mencakup BMW luxury, Audi sport, Nissan economy, dan Saab compact.",
+                "success"
+            );
+        });
+
+        // Handle file upload and preview
+        function handleFileUpload(file) {
+            const fileName = file.name;
+            const fileExtension = fileName.toLowerCase().split('.').pop();
+            
+            // Show file name with type indicator
+            const fileNameElement = document.getElementById('file-name');
+            let fileTypeText = '';
+            
+            if (fileExtension === 'csv') {
+                fileTypeText = 'CSV';
+            } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+                fileTypeText = 'Excel';
+            }
+            
+            fileNameElement.innerHTML = `${fileName} <span class="text-xs text-slate-500 ml-2">(${fileTypeText})</span>`;
+            
+            // Update step indicator
+            updateStepIndicator(2);
+            
+            if (fileExtension === 'csv') {
+                // Handle CSV file
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const contents = e.target.result;
+                    parseCSV(contents);
+                };
+                reader.readAsText(file);
+            } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+                // Show processing message for Excel files
+                showMessage("Sedang memproses file Excel...", "success");
+                
+                // Handle Excel file
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        
+                        // Get first sheet
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        
+                        // Convert to CSV
+                        const csvData = XLSX.utils.sheet_to_csv(worksheet);
+                        parseCSV(csvData);
+                        
+                        showMessage(`File Excel berhasil dikonversi dari sheet: ${firstSheetName}`, "success");
+                    } catch (error) {
+                        console.error('Error reading Excel file:', error);
+                        showMessage("Terjadi kesalahan saat membaca file Excel. Pastikan file tidak rusak atau gunakan format lain", "error");
+                        resetFileUpload();
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function parseCSV(csvData) {
+            const lines = csvData.split('\n').filter(line => line.trim() !== '');
+            const headers = lines[0].split(',').map(h => h.trim());
+            const previewRows = Math.min(5, lines.length - 1); // Show max 5 rows
+            
+            // Required features for the ML model
+            const requiredFeatures = [
+                'wheelbase', 'carlength', 'carwidth', 'curbweight',
+                'enginesize', 'boreratio', 'horsepower', 'citympg',
+                'highwaympg', 'CompanyName', 'fueltype', 'aspiration',
+                'doornumber', 'carbody', 'drivewheel', 'enginetype',
+                'cylindernumber', 'fuelsystem'
+            ];
+            
+            // Validate minimum requirements
+            if (lines.length < 2) {
+                showMessage("File kosong atau tidak memiliki data untuk diproses", "error");
+                resetFileUpload();
+                return;
+            }
+            
+            // Validate required columns
+            const validationResult = validateColumns(headers, requiredFeatures);
+            
+            // Store CSV data globally for later use in results display
+            csvHeaders = headers;
+            csvData = [];
+            for (let i = 1; i < lines.length; i++) {
+                const cells = lines[i].split(',').map(cell => cell.trim());
+                if (cells.length === headers.length) {
+                    csvData.push(cells);
+                }
+            }
+            
+            // Clear previous preview
+            document.getElementById('preview-headers').innerHTML = '';
+            document.getElementById('preview-data').innerHTML = '';
+            
+            // Add headers
+            headers.forEach(header => {
+                const th = document.createElement('th');
+                th.textContent = header;
+                document.getElementById('preview-headers').appendChild(th);
+            });
+            
+            // Add data rows
+            for (let i = 1; i <= previewRows && i < lines.length; i++) {
+                const row = document.createElement('tr');
+                const cells = lines[i].split(',');
+                
+                // Pad cells if needed
+                while (cells.length < headers.length) {
+                    cells.push('');
+                }
+                
+                cells.slice(0, headers.length).forEach(cell => {
+                    const td = document.createElement('td');
+                    td.textContent = cell.trim();
+                    row.appendChild(td);
+                });
+                
+                document.getElementById('preview-data').appendChild(row);
+            }
+            
+            // Show file size info
+            const totalRows = lines.length - 1; // Exclude header
+            const fileSizeElement = document.getElementById('file-size').querySelector('span');
+            fileSizeElement.textContent = `${totalRows} baris, ${headers.length} kolom`;
+            
+            // Update validation status display
+            updateValidationStatus(validationResult);
+            
+            // Show preview
+            filePreview.classList.remove('hidden');
+            
+            // Enable/disable submit button based on validation
+            if (validationResult.isValid) {
+                batchSubmit.disabled = false;
+                batchSubmit.classList.remove('opacity-50', 'cursor-not-allowed');
+                // showMessage(`File berhasil dimuat: ${totalRows} baris data ditemukan`, "success");
+            } else {
+                batchSubmit.disabled = true;
+                batchSubmit.classList.add('opacity-50', 'cursor-not-allowed');
+                // showMessage(`${validationResult.message}`, "error");
+            }
+            
+            // Add smooth scroll to preview
+            setTimeout(() => {
+                filePreview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 300);
+        }
+
+        // Function to update validation status display
+        function updateValidationStatus(validationResult) {
+            const statusDot = document.getElementById('validation-dot');
+            const statusText = document.getElementById('validation-text');
+            const validationInfoContent = document.getElementById('validation-info-content');
+            
+            if (validationResult.hasAllRequired) {
+                // Valid file
+                statusDot.className = 'w-2 h-2 bg-green-400 rounded-full';
+                statusText.className = 'text-xs text-green-400 font-medium';
+                statusText.textContent = 'File Valid';
+                
+                // Show validation details for valid files
+                validationInfoContent.innerHTML = `
+                    <div class="mb-3">
+                        <p class="text-green-400 font-medium mb-1">Semua kolom yang diperlukan tersedia</p>
+                        <p class="text-slate-400 text-xs">File siap untuk diproses.</p>
+                    </div>
+                    ${validationResult.extraColumns.length > 0 ? `
+                    <div class="mb-3">
+                        <p class="text-yellow-400 font-medium mb-1">Kolom tambahan yang akan diabaikan:</p>
+                        <div class="ml-4">
+                            ${validationResult.extraColumns.map(col => `<span class="inline-block bg-yellow-500/20 text-yellow-300 px-2 py-1 rounded text-xs mr-2 mb-1">${col}</span>`).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                `;
+            } else {
+                // Invalid file
+                statusDot.className = 'w-2 h-2 bg-red-400 rounded-full animate-pulse';
+                statusText.className = 'text-xs text-red-400 font-medium';
+                statusText.textContent = `File Tidak Valid - Kolom tidak sesuai model`;
+                
+                // Show validation details for invalid files
+                validationInfoContent.innerHTML = `
+                    <div class="mb-3">
+                        <p class="text-red-400 font-medium mb-1">File tidak dapat diproses</p>
+                        <p class="text-slate-400 text-xs">Beberapa kolom yang diperlukan tidak ditemukan dalam file.</p>
+                    </div>
+                    <div class="mb-3">
+                        <p class="text-red-400 font-medium mb-1">Kolom yang hilang:</p>
+                        <div class="ml-4">
+                            ${validationResult.missingColumns.map(col => `<span class="inline-block bg-red-500/20 text-red-300 px-2 py-1 rounded text-xs mr-2 mb-1">${col}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div>
+                        <p class="text-slate-400 font-medium mb-1">Solusi:</p>
+                        <ul class="ml-4 text-xs text-slate-400 list-disc">
+                            <li>Download template CSV yang disediakan</li>
+                            <li>Pastikan semua nama kolom sesuai dengan template</li>
+                            <li>Periksa ejaan dan huruf besar/kecil pada nama kolom</li>
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+
+        // Function to update step indicator
+        function updateStepIndicator(step) {
+            const steps = [1, 2, 3];
+            steps.forEach(s => {
+                const stepEl = document.getElementById(`step${s}`);
+                const stepParent = stepEl.parentElement;
+                const stepText = stepParent.querySelector('span');
+                
+                if (s <= step) {
+                    stepEl.classList.remove('bg-slate-600', 'text-slate-400');
+                    stepEl.classList.add('bg-teal-500', 'text-white');
+                    stepText.classList.remove('text-slate-500');
+                    stepText.classList.add('text-slate-300');
+                } else {
+                    stepEl.classList.remove('bg-teal-500', 'text-white');
+                    stepEl.classList.add('bg-slate-600', 'text-slate-400');
+                    stepText.classList.remove('text-slate-300');
+                    stepText.classList.add('text-slate-500');
+                }
+            });
+        }
+
+        // Batch submit
+        batchSubmit.addEventListener('click', async () => {
+            const file = csvUpload.files[0];
+            if (!file) return;
+            
+            // Check if button is disabled
+            if (batchSubmit.disabled) {
+                showMessage("File tidak valid. Perbaiki kolom file terlebih dahulu sebelum melanjutkan.", "error");
+                return;
+            }
+            
+            // Validate token before proceeding
+            const isTokenValid = await validateToken();
+            if (!isTokenValid) {
+                return; // Stop execution if token is invalid
+            }
+            
+            // Update step indicator
+            updateStepIndicator(3);
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Show loading state
+            batchSubmit.disabled = true;
+            batchSubmit.classList.add('hidden');
+            batchLoading.classList.remove('hidden');
+            filePreview.classList.add('hidden');
+            
+            // Enhanced progress simulation
+            let progress = 0;
+            const progressBar = document.getElementById('batch-progress-bar');
+            const progressText = document.getElementById('progress-text');
+            const processSteps = document.querySelectorAll('#batch-loading .flex.items-center.gap-2');
+            
+            const progressInterval = setInterval(() => {
+                progress += Math.random() * 15 + 5; // Random increment between 5-20
+                if (progress > 90) {
+                    progress = 90;
+                    clearInterval(progressInterval);
+                }
+                
+                progressBar.style.width = `${progress}%`;
+                progressText.textContent = `${Math.round(progress)}% selesai`;
+                
+                // Update processing steps visual feedback
+                if (progress > 30) {
+                    processSteps[0].querySelector('.w-2').classList.remove('bg-teal-400', 'animate-pulse');
+                    processSteps[0].querySelector('.w-2').classList.add('bg-green-400');
+                    processSteps[1].querySelector('.w-2').classList.remove('bg-slate-600');
+                    processSteps[1].querySelector('.w-2').classList.add('bg-blue-400', 'animate-pulse');
+                    processSteps[1].querySelector('span').classList.remove('text-slate-500');
+                    processSteps[1].querySelector('span').classList.add('text-slate-400');
+                }
+                
+                if (progress > 70) {
+                    processSteps[1].querySelector('.w-2').classList.remove('bg-blue-400', 'animate-pulse');
+                    processSteps[1].querySelector('.w-2').classList.add('bg-green-400');
+                    processSteps[2].querySelector('.w-2').classList.remove('bg-slate-600');
+                    processSteps[2].querySelector('.w-2').classList.add('bg-purple-400', 'animate-pulse');
+                    processSteps[2].querySelector('span').classList.remove('text-slate-500');
+                    processSteps[2].querySelector('span').classList.add('text-slate-400');
+                }
+            }, 300);
+            
+            try {
+                const response = await fetch('/batch-predict-file', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    // Check if it's a token-related error
+                    if (response.status === 401 || response.status === 403) {
+                        clearInterval(progressInterval);
+                        batchLoading.classList.add('hidden');
+                        batchSubmit.classList.remove('hidden');
+                        handleTokenExpired();
+                        return;
+                    }
+                    
+                    let errorMessage = "Batch prediction gagal";
+                    if (result.detail) {
+                        if (result.detail.includes("Model is not available")) {
+                            errorMessage = "Model prediksi tidak tersedia. Silakan coba lagi nanti.";
+                        } else if (result.detail.includes("File harus CSV atau Excel")) {
+                            errorMessage = "Format file tidak didukung. Gunakan file CSV atau Excel.";
+                        } else {
+                            errorMessage = result.detail;
+                        }
+                    }
+                    throw new Error(errorMessage);
+                }
+                
+                // Complete progress
+                clearInterval(progressInterval);
+                progressBar.style.width = '100%';
+                progressText.textContent = '100% selesai';
+                
+                // Complete all steps
+                processSteps[2].querySelector('.w-2').classList.remove('bg-purple-400', 'animate-pulse');
+                processSteps[2].querySelector('.w-2').classList.add('bg-green-400');
+                processSteps[2].querySelector('span').classList.remove('text-slate-500');
+                processSteps[2].querySelector('span').classList.add('text-green-400');
+                
+                // Wait a moment before showing results
+                setTimeout(() => {
+                    displayBatchResults(result);
+                    showMessage("Batch prediction berhasil diproses!", "success");
+                }, 800);
+                
+            } catch (error) {
+                console.error(error);
+                clearInterval(progressInterval);
+                showMessage(`Terjadi kesalahan: ${error.message}`, "error");
+            } finally {
+                setTimeout(() => {
+                    batchLoading.classList.add('hidden');
+                    batchSubmit.classList.remove('hidden');
+                    batchSubmit.disabled = false;
+                    // Reset progress
+                    progressBar.style.width = '0%';
+                    progressText.textContent = '0% selesai';
+                }, 1000);
+            }
+        });
+
+        function displayBatchResults(data) {
+            // Store results globally for download functionality
+            batchResults = data;
+            
+            // Clear previous results
+            document.getElementById('result-headers').innerHTML = '';
+            document.getElementById('result-data').innerHTML = '';
+            
+            // Set total processed count
+            document.getElementById('total-processed').textContent = data.length;
+            
+            // Add headers - hanya ID, Predicted Price, Price Segment
+            const idTh = document.createElement('th');
+            idTh.textContent = 'ID';
+            idTh.classList.add('text-slate-300');
+            document.getElementById('result-headers').appendChild(idTh);
+            
+            const predictionTh = document.createElement('th');
+            predictionTh.textContent = 'Predicted Price';
+            predictionTh.classList.add('text-teal-400');
+            document.getElementById('result-headers').appendChild(predictionTh);
+            
+            const segmentTh = document.createElement('th');
+            segmentTh.textContent = 'Price Segment';
+            segmentTh.classList.add('text-blue-400');
+            document.getElementById('result-headers').appendChild(segmentTh);
+            
+            // Add data rows - hanya ID, prediction, dan segment
+            data.forEach((result, index) => {
+                const row = document.createElement('tr');
+                
+                // Add ID (index + 1 untuk mulai dari 1)
+                const idTd = document.createElement('td');
+                idTd.textContent = index + 1;
+                idTd.classList.add('text-slate-300', 'font-medium');
+                row.appendChild(idTd);
+                
+                // Add prediction value
+                const predictionTd = document.createElement('td');
+                predictionTd.textContent = new Intl.NumberFormat('id-ID', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(result.predicted_price);
+                predictionTd.classList.add('text-teal-400', 'font-medium');
+                row.appendChild(predictionTd);
+                
+                // Add price segment
+                const segmentTd = document.createElement('td');
+                segmentTd.textContent = result.price_segment;
+                segmentTd.classList.add('text-blue-400', 'font-medium');
+                row.appendChild(segmentTd);
+                
+                document.getElementById('result-data').appendChild(row);
+            });
+            
+            // Show results section
+            batchResult.classList.remove('hidden');
+            
+            // Smooth scroll to results
+            setTimeout(() => {
+                batchResult.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }, 300);
+        }
+
+        // Global variable to store batch results for download
+        let batchResults = [];
+
+        // Download results
+        document.getElementById('download-results').addEventListener('click', () => {
+            if (batchResults.length === 0) {
+                showMessage("Tidak ada hasil untuk diunduh", "error");
+                return;
+            }
+
+            // Create CSV content with simple format: ID, Predicted Price, Price Segment
+            let csvContent = '';
+            
+            // Add headers - only ID, Predicted Price, Price Segment
+            csvContent += 'ID,Predicted_Price,Price_Segment\n';
+            
+            // Add data rows - only the prediction results
+            batchResults.forEach((result, index) => {
+                const row = [
+                    index + 1, // ID mulai dari 1 sesuai urutan
+                    result.predicted_price.toFixed(2),
+                    result.price_segment
+                ];
+                
+                csvContent += row.join(',') + '\n';
+            });
+            
+            // Create and download file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.setAttribute('href', url);
+            link.setAttribute('download', `car_price_predictions_${new Date().getTime()}.csv`);
+            link.style.display = 'none';
+
+            document.body.appendChild(link);
+            link.click();
+
+            // Cleanup
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+            
+            showMessage("Hasil prediksi berhasil diunduh", "success");
+        });
+
+        // Helper function to show messages
         function showMessage(msg, type) {
             const box = document.getElementById('message-box');
             const icon = document.getElementById('message-icon');
@@ -591,6 +2055,68 @@
             setTimeout(() => {
                 box.classList.add('hidden');
             }, 5000);
+        }
+
+        // Enhanced validation alert function for better UX
+        function showValidationAlert(title, message, type) {
+            // Create or get existing validation alert container
+            let alertContainer = document.getElementById('validation-alert');
+            
+            if (!alertContainer) {
+                alertContainer = document.createElement('div');
+                alertContainer.id = 'validation-alert';
+                alertContainer.className = 'fixed top-4 right-4 z-50 max-w-md transform transition-all duration-300 translate-x-full';
+                document.body.appendChild(alertContainer);
+            }
+            
+            // Define colors based on type
+            const colors = {
+                success: 'bg-green-500/90 border-green-400 text-white',
+                warning: 'bg-amber-500/90 border-amber-400 text-white',
+                error: 'bg-red-500/90 border-red-400 text-white'
+            };
+            
+            // Create alert content
+            alertContainer.innerHTML = `
+                <div class="backdrop-filter backdrop-blur-md ${colors[type]} border-l-4 p-4 rounded-lg shadow-xl">
+                    <div class="flex items-start">
+                        <div class="flex-1">
+                            <h4 class="font-semibold text-white mb-1">${title}</h4>
+                            <p class="text-sm text-white/90 leading-relaxed">${message}</p>
+                        </div>
+                        <button onclick="hideValidationAlert()" class="ml-3 text-white/70 hover:text-white transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            // Show alert with animation
+            setTimeout(() => {
+                alertContainer.classList.remove('translate-x-full');
+                alertContainer.classList.add('translate-x-0');
+            }, 100);
+            
+            // Auto hide after 6 seconds for better readability
+            setTimeout(() => {
+                hideValidationAlert();
+            }, 6000);
+        }
+
+        // Function to hide validation alert
+        function hideValidationAlert() {
+            const alertContainer = document.getElementById('validation-alert');
+            if (alertContainer) {
+                alertContainer.classList.remove('translate-x-0');
+                alertContainer.classList.add('translate-x-full');
+                setTimeout(() => {
+                    if (alertContainer.parentNode) {
+                        alertContainer.parentNode.removeChild(alertContainer);
+                    }
+                }, 300);
+            }
         }
 
         // Add subtle animations on scroll
@@ -608,8 +2134,16 @@
         }, observerOptions);
 
         // Observe form sections
-        document.querySelectorAll('form > div').forEach(section => {
+        document.querySelectorAll('form > div, #batch-form > div').forEach(section => {
             observer.observe(section);
+        });
+
+        // Validation info toggle
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('#validation-info')) {
+                const validationDetails = document.getElementById('validation-details');
+                validationDetails.classList.toggle('hidden');
+            }
         });
     </script>
 </body>

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, status, Body, Depends
+from fastapi import FastAPI, HTTPException, status, Body, Depends, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.openapi.utils import get_openapi
@@ -6,13 +6,11 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from typing import List
 import logging
+import time
 
 from mlflow.tracking import MlflowClient
 from mlflow.exceptions import MlflowException
-
-import time
 from datetime import datetime
-import pandas as pd
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -108,35 +106,24 @@ async def load_model():
         client = app.state.client
         model_name = app.state.model_name
         
-        latest_versions = client.get_latest_versions(model_name, stages=["Production"])
-        if not latest_versions:
-            logger.error(f"Model {model_name} not found in Production stage")
-            app.state.model = None
-            app.state.model_version = None
-            app.state.model_run_id = None
-            return
-            
-        latest_version = latest_versions[0].version
-        run_id = latest_versions[0].run_id
-        
         # Check if we already have this version loaded
-        if (hasattr(app.state, 'model_version') and 
-            app.state.model_version == latest_version and 
-            app.state.model is not None):
-            logger.info(f"Model {model_name} v{latest_version} already loaded")
-            return
-            
-        logger.info(f"Loading model {model_name} v{latest_version}")
+        if hasattr(app.state, 'model_version') and app.state.model is not None:
+            try:
+                # Verify current version is still the latest
+                latest_versions = client.get_latest_versions(model_name, stages=["Production"])
+                if latest_versions and latest_versions[0].version == app.state.model_version:
+                    logger.info(f"Model {model_name} v{app.state.model_version} already loaded")
+                    return
+            except Exception as e:
+                logger.warning(f"Failed to check current model version: {str(e)}")
         
-        # load model
-        model = mlflow.sklearn.load_model(f"models:/{model_name}/{latest_version}")
+        # Load model using utility function
+        model, version, run_id = load_model_from_mlflow(client, model_name)
         
         # Store in application state
         app.state.model = model
-        app.state.model_version = latest_version
+        app.state.model_version = version
         app.state.model_run_id = run_id
-        
-        logger.info(f"Successfully loaded model {model_name} v{latest_version}")
         
     except Exception as e:
         logger.error(f"Failed to load model: {str(e)}")
@@ -185,10 +172,25 @@ async def token_dashboard():
           response_description="Access token and token type")
 async def get_token(api_key: str = Body(..., embed=True)):
     """Endpoint untuk mendapatkan token akses"""
-    if api_key != os.getenv("API_KEY"):
+    if not validate_api_key(api_key):
         raise HTTPException(status_code=401, detail="Invalid API key")
     access_token = create_access_token(data={"sub": "api_client"})
     return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/validate-token",
+         tags=["Authentication"],
+         summary="Validate Access Token",
+         description="""
+# Validate if the provided Bearer token is still valid.
+
+**Required**: Valid Bearer token in Authorization header
+
+**Returns**: Simple validation status
+         """,
+         response_description="Token validation status")
+async def validate_token(current_user: dict = Depends(verify_token)):
+    """Endpoint untuk memvalidasi token akses"""
+    return {"valid": True, "message": "Token is valid"}
 
 @app.post("/predict", 
           response_model=PredictionResponse, 
@@ -208,30 +210,22 @@ async def get_token(api_key: str = Body(..., embed=True)):
 async def predict(request: PredictionRequest):
     """Endpoint untuk prediksi tunggal"""
     try:
-        # Check if model is loaded
-        if app.state.model is None:
-            # Try to reload model
-            await load_model()
-            if app.state.model is None:
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Model is not available"
-                )
+        # Ensure model is loaded
+        if not await ensure_model_loaded(app.state, load_model):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Model is not available"
+            )
         
-        # Prepare input data
-        input_df = pd.DataFrame([request.dict()])
+        # Make prediction using utility function
+        result = make_single_prediction(
+            model=app.state.model,
+            request_data=request.dict(),
+            model_name=app.state.model_name,
+            model_version=app.state.model_version
+        )
         
-        # Make prediction using cached model
-        prediction = app.state.model.predict(input_df)[0]
-        price_segment = assign_price_segment(prediction)
-
-        return {
-            "predicted_price": prediction,
-            "price_segment": price_segment,
-            "model_name": app.state.model_name,
-            "model_version": app.state.model_version,
-            "status": "success"
-        }
+        return result
         
     except HTTPException:
         raise
@@ -262,33 +256,22 @@ async def predict(request: PredictionRequest):
 async def batch_predict(requests: List[PredictionRequest]):
     """Endpoint untuk prediksi batch"""
     try:
-        # Check if model is loaded
-        if app.state.model is None:
-            # Try to reload model
-            await load_model()
-            if app.state.model is None:
-                raise HTTPException(
-                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                    detail="Model is not available"
-                )
+        # Ensure model is loaded
+        if not await ensure_model_loaded(app.state, load_model):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Model is not available"
+            )
         
-        # Prepare input data
-        input_df = pd.DataFrame([r.dict() for r in requests])
+        # Make batch predictions using utility function
+        requests_data = [r.dict() for r in requests]
+        results = make_batch_predictions(
+            model=app.state.model,
+            requests_data=requests_data,
+            model_name=app.state.model_name,
+            model_version=app.state.model_version
+        )
         
-        # Make predictions using cached model
-        predictions = app.state.model.predict(input_df)
-        
-        results = []
-        for idx, pred in enumerate(predictions):
-            price_segment = assign_price_segment(pred)
-            results.append({
-                "id": idx,
-                "predicted_price": pred,
-                "price_segment": price_segment,
-                "model_name": app.state.model_name,
-                "model_version": app.state.model_version,
-                "status": "success"
-            })
         return results
         
     except HTTPException:
@@ -298,6 +281,61 @@ async def batch_predict(requests: List[PredictionRequest]):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Batch prediction failed: {str(e)}"
+        )
+
+@app.post("/batch-predict-file",
+          response_model=List[BatchPredictionResponse],
+          dependencies=[Depends(verify_token)],
+          tags=["Predictions"],
+          summary="Batch Car Price Predictions via File",
+          description="""
+# Predict prices for multiple cars by uploading CSV or Excel file.
+
+**Authentication Required**: Bearer token
+
+**Input**: CSV or Excel file with car specifications
+
+**Output**: Array of predictions with individual IDs and metadata
+          """,
+          response_description="List of prediction results with IDs")
+async def batch_predict_file(file: UploadFile = File(...)):
+    """Endpoint untuk prediksi batch melalui file CSV / Excel"""
+    try:
+        # Validate file extension
+        if not validate_file_extension(file.filename):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File harus CSV atau Excel"
+            )
+
+        # Ensure model is loaded
+        if not await ensure_model_loaded(app.state, load_model):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Model is not available"
+            )
+
+        # Read file to DataFrame using utility function
+        df = read_file_to_dataframe(file.file, file.filename)
+
+        # Make batch predictions
+        requests_data = df.to_dict(orient='records')
+        results = make_batch_predictions(
+            model=app.state.model,
+            requests_data=requests_data,
+            model_name=app.state.model_name,
+            model_version=app.state.model_version
+        )
+        
+        return results
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Batch prediction via file failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Batch prediction via file failed: {str(e)}"
         )
 
 @app.get("/model/metadata", 
@@ -316,29 +354,10 @@ async def get_model_metadata():
         client = app.state.client
         model_name = app.state.model_name
 
-        latest_versions = client.get_latest_versions(model_name, stages=["Production"])
-        if not latest_versions:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Model {model_name} not found in Production stage"
-            )
+        # Get model metadata using utility function
+        metadata = get_model_metadata_from_mlflow(client, model_name)
+        return metadata
         
-        latest_version = latest_versions[0].version
-        run = client.get_run(latest_versions[0].run_id)
-        if not run:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Run for model version {latest_version} not found"
-            )
-        training_datetime = datetime.fromtimestamp(run.info.start_time / 1000)
-        
-        return {
-            "model_name": model_name,
-            "version": latest_version,
-            "training_date": training_datetime.strftime("%Y-%m-%d"),
-            "metrics": run.data.metrics,
-            "parameters": run.data.params
-        }
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -367,17 +386,10 @@ async def health_check():
     
     mlflow_status = "connected" if check_mlflow_connection() else "disconnected"
     mlflow_db_status = "connected" if check_postgres_connection() else "disconnected"
-    
-    # Check model status with detailed information
     model_status = "loaded" if app.state.model is not None else "not_loaded"
     
-    # Determine overall health status
-    overall_status = "healthy"
-    if model_status == "not_loaded":
-        overall_status = "degraded"
-    elif mlflow_status == "disconnected":
-        overall_status = "degraded"
-    # Database disconnected is not critical for prediction, so we don't degrade for that
+    # Determine overall health status using utility function
+    overall_status = determine_overall_health_status(model_status, mlflow_status)
     
     return {
         "status": overall_status,
@@ -415,22 +427,13 @@ async def load_model_by_name(model_name: str = Body(..., embed=True), stage: str
     try:
         app.state.model_name = model_name
 
-        # Ambil model dari stage yang diminta (default Production)
-        latest_versions = app.state.client.get_latest_versions(model_name, stages=[stage])
-        if not latest_versions:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Model {model_name} not found in stage '{stage}'"
-            )
-
-        # Paksa load model sesuai stage
-        await load_model()
-
-        if app.state.model is None:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=f"Failed to load model {model_name} from stage '{stage}'"
-            )
+        # Load model using utility function
+        model, version, run_id = load_model_from_mlflow(app.state.client, model_name, stage)
+        
+        # Store in application state
+        app.state.model = model
+        app.state.model_version = version
+        app.state.model_run_id = run_id
 
         return {
             "message": f"Model {model_name} loaded successfully from {stage} stage",
@@ -438,8 +441,11 @@ async def load_model_by_name(model_name: str = Body(..., embed=True), stage: str
             "model_version": app.state.model_version
         }
 
-    except HTTPException:
-        raise
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
     except Exception as e:
         logger.error(f"Failed to load model by name: {str(e)}")
         raise HTTPException(
