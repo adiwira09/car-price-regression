@@ -104,7 +104,6 @@ car-price-prediction/
 ```
 
 ## Setup and Installation
-
 ### Prerequisites
 - Python 3.11+
 - Docker dan Docker Compose
@@ -143,7 +142,6 @@ pip install -r app/requirements.txt
 ```
 
 ## Usage
-
 ### API Authentication
 Untuk menggunakan API, Anda perlu mendapatkan access token terlebih dahulu:
 ```bash
@@ -251,7 +249,7 @@ wheelbase,carlength,carwidth,curbweight,enginesize,boreratio,horsepower,citympg,
 - **Excel**: File `.xlsx` atau `.xls`
 
 #### Batasan Ukuran File:
-- Ukuran file maksimum: Sesuai konfigurasi FastAPI (default: 16MB)
+- Ukuran file maksimum: 10MB
 
 ## Model Details
 ### Algorithm
