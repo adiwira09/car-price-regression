@@ -32,18 +32,23 @@ Sistem prediksi harga mobil dan segmentasi pelanggan menggunakan machine learnin
 
 
 ## Architecture
-
 ### System Architecture Overview
-![System Overview](images/system-overview.jpg)
-*Diagram arsitektur sistem menunjukkan semua komponen dan interaksinya*
+<p align="center">
+  <img src="images/system-overview.jpg" alt="System Overview" width="800"/><br/>
+  <em>Diagram arsitektur sistem menunjukkan semua komponen dan interaksinya</em>
+</p>
 
 ### ML Model Training Pipeline
-![ML Training Pipeline](images/model-ml-training.png)
-*Workflow training dan deployment model machine learning*
+<p align="center">
+  <img src="images/model-ml-training.png" alt="ML Training Pipeline" width="600"/><br/>
+  <em>Workflow training dan deployment model machine learning</em>
+</p>
 
 ### Container & Infrastructure Architecture
-![Container Architecture](images/container-overview.png)
-*Arsitektur containerization Docker dan struktur deployment service*
+<p align="center">
+  <img src="images/container-overview.png" alt="Container Architecture" width="750"/><br/>
+  <em>Arsitektur containerization Docker dan struktur deployment service</em>
+</p>
 
 ## Tech Stack
 ### Core Technologies
@@ -303,8 +308,13 @@ Access dashboard di: http://localhost:3000
 - Default credentials: admin/admin
 
 #### === Dashboard monitoring untuk FastAPI ===
-![FastAPI Monitoring Dashboard](images/fastapi-monitoring.png)
-*Custom FastAPI Observability Dashboard (berdasarkan [Grafana Template #22676](https://grafana.com/grafana/dashboards/22676-fastapi-observability/))*
+<p align="center">
+  <img src="images/fastapi-monitoring.png" alt="FastAPI Monitoring Dashboard"/><br/>
+  <em>
+    Custom FastAPI Observability Dashboard (based on 
+    <a href="https://grafana.com/grafana/dashboards/22676-fastapi-observability/">Grafana Template #22676</a>)
+  </em>
+</p>
 
 **Metrics yang Dimonitor:**
 - **Total Requests**: Jumlah total HTTP requests yang diterima
@@ -317,8 +327,13 @@ Access dashboard di: http://localhost:3000
 - **Process Resource Monitoring**: Timeline penggunaan CPU dan memory
 
 #### === System & Container Resources Monitoring Dashboard ===
-![Container Monitoring Dashboard](images/docker-system-monitoring.png)
-*Docker and System Monitoring Dashboard (based on [Grafana Template #4271](https://grafana.com/grafana/dashboards/4271-docker-and-system-monitoring/))*
+<p align="center">
+  <img src="images/docker-system-monitoring.png" alt="Container Monitoring Dashboard"/><br/>
+  <em>
+    Docker and System Monitoring Dashboard (based on 
+    <a href="https://grafana.com/grafana/dashboards/4271-docker-and-system-monitoring/">Grafana Template #4271</a>)
+  </em>
+</p>
 
 **Metrics yang Dimonitor:**
 - **Container Count**: Jumlah containers yang berjalan
