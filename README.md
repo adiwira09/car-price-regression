@@ -168,7 +168,7 @@ curl -X POST "http://localhost/predict" \
      -d '{"wheelbase": 102.4, "carlength": 175.6, "carwidth": 65.2, "curbweight": 2372, "enginesize": 122, "boreratio": 3.31, "horsepower": 92, "citympg": 27, "highwaympg": 32, "CompanyName": "Toyota", "fueltype": "gas", "aspiration": "std", "doornumber": "four", "carbody": "sedan", "drivewheel": "fwd", "enginetype": "ohc", "cylindernumber": "four", "fuelsystem": "2bbl"}'
 
 # Batch prediction
-curl -X POST "http://localhost/predict-batch" \
+curl -X POST "http://localhost/batch-predict" \
      -H "Content-Type: application/json" \
      -H "Authorization: Bearer your_access_token" \
      -d '[
